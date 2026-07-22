@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "synclair",
-  "homepage": "https://github.com/joshuaiwata/synclair",
+  "homepage": "https://github.com/cellfade/synclair",
   "items": [
     {
       "name": "status-badge",

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # preview-server.sh — reliable dev/preview server management for Synclair.
 #
-# Port 4100 is DEDICATED to this project. Port 3000 is reserved by another app on this
-# machine — this script NEVER touches it. Only `next` processes whose cwd is THIS repo
-# are ever killed, so it is safe to run even with other dev servers around.
+# Port 4100 is Synclair's preferred default, but another project may already own
+# it. This script NEVER kills a listener unless it is a `next` process whose cwd
+# is THIS repo.
 #
 # This script does NOT start the server. Starting must go through the harness
 # (preview_start) so the preview MCP tracks the server. This script frees the port,
@@ -15,7 +15,7 @@
 #   scripts/preview-server.sh clean     # reclaim + rm -rf .next  (fixes blank / hung compile)
 #   scripts/preview-server.sh doctor    # diagnose and tell you the next action
 
-set -uo pipefail
+set -euo pipefail
 
 PORT=4100
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -52,7 +52,15 @@ case "${1:-status}" in
       echo "It's likely supervised by the Claude app and will just respawn. To override: $0 reclaim --force"
       exit 0
     fi
-    pids="$( { synclair_dev_pids; pids_on_port; } | grep -E '^[0-9]+$' | sort -u )"
+    listeners="$(pids_on_port | grep -E '^[0-9]+$' | sort -u)"
+    pids="$(synclair_dev_pids | grep -E '^[0-9]+$' | sort -u)"
+    for listener in $listeners; do
+      if ! printf '%s\n' "$pids" | grep -qx "$listener"; then
+        echo "REFUSING: :$PORT is owned by PID $listener, which is not a Next process from $PROJECT_DIR."
+        echo "Choose another port or stop that process from the terminal that owns it."
+        exit 1
+      fi
+    done
     if [ -n "$pids" ]; then
       echo "killing wedged synclair server(s): $(echo "$pids" | tr '\n' ' ')"
       echo "$pids" | xargs kill -9 2>/dev/null || true

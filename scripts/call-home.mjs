@@ -19,7 +19,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-const MOTHER_REPO = "joshuaiwata/synclair";
+const MOTHER_REPO = "cellfade/synclair";
 const MOTHER_PATH = path.join(process.cwd(), "data", "mother.json");
 
 // The mother repo is private (for now): env token first, then the gh CLI's

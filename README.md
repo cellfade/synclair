@@ -1,5 +1,10 @@
 # Synclair
 
+> **Cellfade foundation repository.** For Cellfade projects, clone the private
+> `cellfade/synclair` repository instead of running the public `npx synclair new`
+> command. This keeps Cellfade's reviewed foundation lineage and safety fixes in
+> the update path. See [`docs/cellfade-adoption.md`](docs/cellfade-adoption.md).
+
 [![npm](https://img.shields.io/npm/v/synclair)](https://www.npmjs.com/package/synclair)
 [![license](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 

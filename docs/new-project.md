@@ -1,5 +1,12 @@
 # Starting a new project from Synclair
 
+> **Cellfade internal path:** clone the private foundation with
+> `gh repo clone cellfade/synclair <new-project>`, then rename that clone's
+> `origin` remote to `upstream` before adding the new project's own private
+> `origin`. Do not use the public `npx synclair new` shortcut for Cellfade work;
+> it clones the public lineage rather than Cellfade's reviewed foundation. The
+> complete internal procedure is in [`cellfade-adoption.md`](cellfade-adoption.md).
+
 > **Where this sits in the two axes** ([`setup-modes.md`](setup-modes.md)): this doc is
 > the **fresh-seed** path — you reseed a brand/identity from scratch rather than intaking
 > from existing code. It describes the common **embedded** bundle (the product grows

@@ -26,7 +26,8 @@
     "call-home": "node scripts/call-home.mjs",
     "bridge:agents": "node scripts/bridge-agents.mjs",
     "check:agent-bridge": "node scripts/bridge-agents.mjs --check",
-    "verify-ui": "npm run typecheck && npm run lint && npm run check:registry && npm run check:previews && npm run check:ux-docs && npm run check:purity && npm run check:pages && npm run check:agent-bridge",
+    "check:cellfade-foundation": "node scripts/check-cellfade-foundation.mjs",
+    "verify-ui": "npm run check:cellfade-foundation && npm run typecheck && npm run lint && npm run check:registry && npm run check:previews && npm run check:ux-docs && npm run check:purity && npm run check:pages && npm run check:agent-bridge",
     "postinstall": "patch-package"
   },
   "dependencies": {

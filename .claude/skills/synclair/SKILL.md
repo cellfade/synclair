@@ -7,13 +7,15 @@ description: Maintain the Synclair foundation — keep this repo true to the bra
 
 # Synclair — the foundation itself
 
-> **Orientation first — are you in the mother or a clone?** The mother /
-> foundation repo is **`https://github.com/joshuaiwata/synclair`**. Run
+> **Orientation first — are you in the mother or a clone?** Cellfade's mother /
+> foundation repo is **`https://github.com/cellfade/synclair`**. Run
 > `git remote -v`: if an **`upstream`** remote points there and this repo's
 > `origin` is a different repo, you are in a **downstream clone** — the "This repo
 > IS Synclair / you are upstream" language below describes the *mother*, not you,
-> and merging a change into the clone does **not** reach the foundation. From a
-> clone, reach the foundation via the **`synclair-sync`** capability.
+> and merging a change into the clone does **not** reach the foundation. The
+> Cellfade mother itself keeps `joshuaiwata/synclair` as its public-lineage
+> `upstream`. From a product clone, reach the Cellfade foundation via the
+> **`synclair-sync`** capability.
 
 **This repo IS Synclair** — the reusable, platform-agnostic foundation that
 projects clone and reseed. The full architecture is

@@ -26,7 +26,7 @@ import { promisify } from "node:util"
  */
 
 /** The mother repo, `owner/name` — the upstream every clone syncs from. */
-export const MOTHER_REPO = "joshuaiwata/synclair"
+export const MOTHER_REPO = "cellfade/synclair"
 export const MOTHER_URL = `https://github.com/${MOTHER_REPO}`
 
 const MOTHER_PATH = path.join(process.cwd(), "data", "mother.json")

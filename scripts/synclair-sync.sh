@@ -21,7 +21,7 @@
 #
 set -euo pipefail
 
-UPSTREAM_URL="https://github.com/joshuaiwata/synclair.git"
+UPSTREAM_URL="https://github.com/cellfade/synclair.git"
 UPSTREAM_BRANCH="main"
 
 # SEED — always the project's own; on conflict keep OURS automatically.
@@ -138,6 +138,17 @@ else
     echo ""
     echo "Then: git commit --no-edit"
   fi
+fi
+
+# Never claim a new foundation baseline while a merge is unresolved. A stamped
+# baseline is consumed by call-home as truth, so advancing it early can hide the
+# exact update that still needs human resolution.
+if git diff --name-only --diff-filter=U | grep -q .; then
+  echo ""
+  echo "STOPPED: merge conflicts remain. The foundation baseline was NOT updated."
+  echo "Resolve the files above, commit the merge, run npm install && npm run verify-ui,"
+  echo "then update data/mother.json to the merged upstream commit."
+  exit 1
 fi
 
 # Stamp the call-home baseline (data/mother.json is SEED, so the merge keeps

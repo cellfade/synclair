@@ -1,5 +1,12 @@
 # Using Synclair alongside an EXISTING project
 
+> **Cellfade internal path:** clone the private foundation with
+> `gh repo clone cellfade/synclair <project>-synclair`, then rename that clone's
+> `origin` remote to `upstream` before adding the companion hub's own private
+> `origin`. Do not use the public `npx synclair new` shortcut for Cellfade work.
+> See [`cellfade-adoption.md`](cellfade-adoption.md) for sibling and embedded
+> procedures.
+
 > **Where this sits in the two axes** ([`setup-modes.md`](setup-modes.md)): this doc is
 > the **intake** path — you populate the hub from code that already exists rather than
 > seeding a fresh brand. It describes the common **watcher** bundle (a *separate* sibling
