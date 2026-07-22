@@ -264,6 +264,8 @@ VERCEL_SCOPE="<confirmed-cellfade-scope>"
 VERCEL_PROJECT="<approved-project-name>"
 npx vercel@54.14.2 --version
 npx vercel@54.14.2 whoami --scope "$VERCEL_SCOPE"
+npx vercel@54.14.2 project add "$VERCEL_PROJECT" \
+  --scope "$VERCEL_SCOPE"
 npx vercel@54.14.2 link --yes --cwd apps/web \
   --scope "$VERCEL_SCOPE" \
   --project "$VERCEL_PROJECT"

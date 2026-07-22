@@ -151,6 +151,11 @@ test("pilot creates a pinned preview without connecting the Git production path"
 
   assert.match(runbook, /npx vercel@54\.14\.2 deploy/)
   assert.match(runbook, /link --yes --cwd apps\/web/)
+  assert.match(runbook, /project add "\$VERCEL_PROJECT"/)
+  assert.ok(
+    runbook.indexOf('project add "$VERCEL_PROJECT"') < runbook.indexOf("link --yes --cwd apps/web"),
+    "the approved Vercel project must be created before it is linked",
+  )
   assert.match(runbook, /project inspect "\$VERCEL_PROJECT"/)
   assert.match(runbook, /deploy apps\/web --yes[\s\S]+--project "\$VERCEL_PROJECT"/)
   assert.doesNotMatch(runbook, /link the private GitHub repository to Vercel/i)
