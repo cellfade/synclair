@@ -7,7 +7,10 @@ description: Pull foundation updates from the mother Synclair repo into this clo
 
 # Syncing with the mother Synclair repo
 
-The mother repo is **`https://github.com/joshuaiwata/synclair`** (`upstream`).
+The Cellfade mother repo is **`https://github.com/cellfade/synclair`**
+(`upstream` in downstream projects). The public
+`joshuaiwata/synclair` repository is lineage only and is never the executable
+update source for a Cellfade project.
 Doctrine (foundation-model.md, principle 3): **clone, sync deliberately** —
 nothing syncs automatically, the seed never syncs at all, and a project pulls
 foundation updates only when it chooses to, as an ordinary git merge.

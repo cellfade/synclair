@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.cellfade.dev/synclair/foundation-release-v1.json",
+  "title": "Synclair Foundation Release Template",
+  "description": "Committed, release-neutral metadata used to construct an immutable Synclair foundation release envelope after the source commit is fixed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repository",
+    "compatibility",
+    "license",
+    "payload"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "name"],
+      "properties": {
+        "owner": {
+          "const": "cellfade"
+        },
+        "name": {
+          "const": "synclair"
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectSchemaVersions", "generatorRange"],
+      "properties": {
+        "projectSchemaVersions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "generatorRange": {
+          "type": "string",
+          "pattern": "^>=\\d+\\.\\d+\\.\\d+ <\\d+\\.\\d+\\.\\d+$"
+        }
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spdx", "noticeFiles"],
+      "properties": {
+        "spdx": {
+          "const": "GPL-3.0-or-later"
+        },
+        "noticeFiles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifestAsset", "archiveAsset", "classes"],
+      "properties": {
+        "manifestAsset": {
+          "const": "foundation-files.json"
+        },
+        "archiveAsset": {
+          "const": "synclair-foundation.tar.gz"
+        },
+        "classes": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "foundation" },
+            { "const": "agent-pack" },
+            { "const": "project-seed-template" },
+            { "const": "runtime-template" }
+          ],
+          "items": false,
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    }
+  }
+}

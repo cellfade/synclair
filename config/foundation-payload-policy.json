@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "defaultClass": "foundation",
+  "classes": {
+    "foundation": [],
+    "agent-pack": [
+      ".claude/agents/**",
+      ".claude/skills/**",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "skills-lock.json"
+    ],
+    "project-seed-template": [
+      "lib/system/seed/**",
+      "data/dev-servers.json",
+      "data/external-catalog.json",
+      "data/knowledge/summaries/**",
+      "data/knowledge/summary-queue.json",
+      "data/pages-map.json",
+      "data/setup.json",
+      "data/system-map.json"
+    ],
+    "runtime-template": [
+      "data/reports/**",
+      "data/ux-docs/**",
+      "memory/**"
+    ]
+  },
+  "exclude": [
+    ".git/**",
+    "**/.git/**",
+    ".next/**",
+    "**/.next/**",
+    "build/**",
+    "**/build/**",
+    "coverage/**",
+    "**/coverage/**",
+    "dist/**",
+    "**/dist/**",
+    "node_modules/**",
+    "**/node_modules/**",
+    "out/**",
+    "**/out/**",
+    "tools/bin/**",
+    "**/tools/bin/**",
+    ".DS_Store",
+    "**/.DS_Store",
+    ".env*",
+    "**/.env*",
+    "*.tsbuildinfo",
+    "**/*.tsbuildinfo",
+    "next-env.d.ts"
+  ]
+}

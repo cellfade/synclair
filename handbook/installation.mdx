@@ -43,7 +43,8 @@ skills, and guardrails ambiently. You reach this topology two ways:
   <Step title="Get the foundation into the repo">
     Starting fresh:
     ```bash
-    npx synclair new my-product   # clones the foundation into ./my-product
+    npx synclair new --cellfade-foundation my-product
+    # Temporary private path; bare `new` fails closed.
     ```
     Existing repo: vendor Synclair at `./synclair` (the `co-locate-synclair` skill does
     this and sets up the build isolation). Either way the foundation stays a git

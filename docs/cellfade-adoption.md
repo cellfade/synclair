@@ -48,7 +48,9 @@ scripts/synclair-reset.sh . --yes
 ```
 
 Then reseed the product identity, theme, knowledge sources, product-spec
-digests, surfaces, and platform adapter per [`new-project.md`](new-project.md).
+digests, and surfaces per [`new-project.md`](new-project.md). The hub resolves a
+preview renderer per item with `adapterFor(item.surface)`; generation, token
+export, and distribution remain separate contracts.
 Record `data/setup.json` as `embedded` because the product and Synclair share one
 repository.
 

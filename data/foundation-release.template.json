@@ -1,0 +1,26 @@
+{
+  "$schema": "../schemas/foundation-release.schema.json",
+  "schemaVersion": 1,
+  "repository": {
+    "owner": "cellfade",
+    "name": "synclair"
+  },
+  "compatibility": {
+    "projectSchemaVersions": [1],
+    "generatorRange": ">=0.1.0 <2.0.0"
+  },
+  "license": {
+    "spdx": "GPL-3.0-or-later",
+    "noticeFiles": ["LICENSE"]
+  },
+  "payload": {
+    "manifestAsset": "foundation-files.json",
+    "archiveAsset": "synclair-foundation.tar.gz",
+    "classes": [
+      "foundation",
+      "agent-pack",
+      "project-seed-template",
+      "runtime-template"
+    ]
+  }
+}

@@ -1,9 +1,10 @@
 # Synclair
 
 > **Cellfade foundation repository.** For Cellfade projects, clone the private
-> `cellfade/synclair` repository instead of running the public `npx synclair new`
-> command. This keeps Cellfade's reviewed foundation lineage and safety fixes in
-> the update path. See [`docs/cellfade-adoption.md`](docs/cellfade-adoption.md).
+> `cellfade/synclair` repository through the explicit private command below.
+> Bare `npx synclair new` fails closed. This keeps Cellfade's reviewed foundation
+> lineage and safety fixes in the update path. See
+> [`docs/cellfade-adoption.md`](docs/cellfade-adoption.md).
 
 [![npm](https://img.shields.io/npm/v/synclair)](https://www.npmjs.com/package/synclair)
 [![license](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
@@ -14,10 +15,13 @@ design tokens, components, views, and distilled product knowledge — served by
 an in-repo hub that humans browse and agents load. <https://synclair.dev>
 
 ```
-npx synclair new my-project
+npx synclair new --cellfade-foundation my-project
 cd my-project
 npm install && npm run dev    # hub at http://localhost:4100/synclair
 ```
+
+This is the temporary migration path until the private
+`@cellfade/create-synclair` factory is released.
 
 ## The problem
 
@@ -85,8 +89,8 @@ Three topologies, one foundation ([`docs/setup-modes.md`](docs/setup-modes.md)):
 
 | You have… | Do this | Guide |
 |---|---|---|
-| **Nothing yet** — new project | `npx synclair new my-project` — the clone *is* the repo; your product grows at `/`, the hub lives at `/synclair` | [`docs/new-project.md`](docs/new-project.md) |
-| **An existing app**, keep repos separate | `npx synclair new my-app-synclair` as a **sibling** directory — Synclair observes and documents the host, on its own server (port 4100), nothing lands in your repo | [`docs/existing-project.md`](docs/existing-project.md) |
+| **Nothing yet** — new project | `npx synclair new --cellfade-foundation my-project` — the clone *is* the repo; your product grows at `/`, the hub lives at `/synclair` | [`docs/new-project.md`](docs/new-project.md) |
+| **An existing app**, keep repos separate | `npx synclair new --cellfade-foundation my-app-synclair` as a **sibling** directory — Synclair observes and documents the host, on its own server (port 4100), nothing lands in your repo | [`docs/existing-project.md`](docs/existing-project.md) |
 | **An existing repo**, one-repo team | Embed it at `./synclair` via git subtree so the whole team (and their agents) get it by cloning | `co-locate-synclair` skill in the clone |
 
 Then open your agent **in the clone** and say what you want:

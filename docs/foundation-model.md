@@ -91,11 +91,12 @@ Grounded in the current `lib/system` + `components` tree.
   catalog *data* (`data/external-catalog.json`) is seed. Freshness is
   machine-checked by `scripts/check-host-drift.mjs` (`npm run check:host`).
 
-### Adapter — swap per platform
-- `lib/system/adapters/` — ✅ the platform seam: `types.ts` (`PlatformAdapter`),
+### Preview adapter — depict each platform in the hub
+- `lib/system/adapters/` — ✅ the gallery-preview seam: `types.ts` (`PreviewAdapter`),
   `web-shadcn.tsx` + `react-native.tsx` (render each `Preview.kind`), `index.ts`
   (`adapterFor(surface)` — a per-item registry keyed by surface platform, §5/§5b).
-  Add an adapter file here to target another platform.
+  Add a preview-adapter file here to depict another platform. These modules do
+  not generate project files or own framework delivery.
 - `lib/system/components.ts` — reads shadcn's `registry.json`. The
   `RegistryComponent` *shape* is brain; the **format it parses** is web-adapter.
 - `registry.json` + `public/r/*.json` — shadcn distribution format. Web-adapter.
@@ -133,16 +134,16 @@ Grounded in the current `lib/system` + `components` tree.
 
 ---
 
-## 4. The one refactor that unlocks platform-independence
+## 4. The preview boundary that unlocks platform-independence
 
-Two places bake in "Synclair == the app's stack." Generalize both and the model
-holds for mobile.
+The hub needs a portable preview value and a small renderer boundary. Token
+export and project delivery are related platform concerns, but they remain
+separate contracts.
 
 ### 4a. `ComponentDoc.render` → a `Preview` representation
 
-Today `DocExample.render` and `DocState.render` are `ReactNode` — i.e. the doc
-*executes* the component. Replace the raw node with an adapter-supplied union so
-a non-web adapter can hand back an image or embed instead:
+`DocExample.preview` and `DocState.preview` use a portable union that the
+document author resolves to a live node, image, embed, or code-only state:
 
 ```ts
 type Preview =
@@ -159,54 +160,51 @@ interface DocExample {
 }
 ```
 
-The web adapter implements `preview` as `{ kind: "live", node }` — nothing
-changes visually for this project. A mobile adapter implements it as `image` or
-`embed`. Everything else in `doc-types.ts` (props, states, notes) is untouched.
+Web documentation commonly authors `{ kind: "live", node }`; mobile
+documentation commonly authors `image` or `embed`. The selected
+`PreviewAdapter` only renders that already-resolved value inside the hub.
+Everything else in `doc-types.ts` (props, states, notes) is untouched.
 
-### 4b. Token bindings become an adapter export
+### 4b. Token bindings and export stay separate from previews
 
-`tokens.ts` keeps the values, semantics, and usage. The *class bindings*
-(`bg-primary`, `rounded-md`, `w-4`) move behind an adapter that turns a token
-into platform code:
+`tokens.ts` keeps the values, semantics, and usage. Platform-specific class or
+code bindings (`bg-primary`, `rounded-md`, `w-4`, native theme keys) may later
+move behind a dedicated token-export contract:
 
 - `web-shadcn` → Tailwind utility class + CSS custom property
 - `react-native` → StyleSheet value / a theme object key
 - `swiftui` → a `Color`/spacing constant
 
-The `figma-export-tokens` skill already emits many of these formats — the
-adapter is largely wiring that output into the gallery's swatch rendering.
+The `figma-export-tokens` skill already emits many of these formats. That export
+and any package/distribution mechanism are separate future seams; they are not
+responsibilities of `PreviewAdapter`.
 
 ---
 
-## 5. The PlatformAdapter interface
+## 5. The PreviewAdapter interface
 
-The whole swappable seam, in one shape:
+The hub's swappable gallery-preview seam, in one shape:
 
 ```ts
-interface PlatformAdapter {
+interface PreviewAdapter {
   id: "web-shadcn" | "react-native" | "swiftui"
 
-  /** Turn a design token into code the app consumes. */
-  exportToken(token: Token): { code: string; className?: string }
-
-  /** How a component is depicted in the gallery (see §4a). */
-  preview(item: RegistryComponent): Preview
-
-  /** How a component gets installed into the app. */
-  distribution: {
-    /** Command or snippet the gallery shows under "Install". */
-    install(name: string): string
-    /** How the registry is read (shadcn json | package | copy). */
-    format: "shadcn-registry" | "npm" | "copy"
-  }
+  /** Render one already-resolved Preview value inside the Synclair gallery. */
+  renderPreview(preview: Preview): ReactNode
 }
 ```
 
-The brain calls the adapter; it never imports platform code directly. ✅
+The brain calls the preview adapter; it never imports platform code directly. ✅
 Resolution is **per item, not per clone**: `lib/system/adapters/index.ts` keys
 adapters by surface platform (`adapterFor(item.surface)` — see §5b), so a
 single-platform project behaves like a global swap while a multi-surface
 project has adapters *coexisting*.
+
+`PreviewAdapter` is intentionally gallery-only. Project generation and delivery
+use separate framework-adapter contracts in the control plane; generator
+packages must not import or reuse this type. There is no deprecated
+`PlatformAdapter` alias because the existing symbol was internal to this seam
+and all consumers were migrated together.
 
 ## 5b. Surfaces — coexisting platforms
 

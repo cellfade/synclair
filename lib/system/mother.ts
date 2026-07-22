@@ -2,6 +2,7 @@ import { execFile } from "node:child_process"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
+import { FOUNDATION_LINEAGE } from "@/lib/system/lineage"
 
 /**
  * CALL HOME — the opt-in freshness check against the mother Synclair repo,
@@ -26,8 +27,8 @@ import { promisify } from "node:util"
  */
 
 /** The mother repo, `owner/name` — the upstream every clone syncs from. */
-export const MOTHER_REPO = "cellfade/synclair"
-export const MOTHER_URL = `https://github.com/${MOTHER_REPO}`
+export const MOTHER_REPO = FOUNDATION_LINEAGE.repository
+export const MOTHER_URL = FOUNDATION_LINEAGE.repositoryUrl
 
 const MOTHER_PATH = path.join(process.cwd(), "data", "mother.json")
 

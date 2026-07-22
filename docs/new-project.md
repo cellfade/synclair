@@ -1,11 +1,11 @@
 # Starting a new project from Synclair
 
 > **Cellfade internal path:** clone the private foundation with
-> `gh repo clone cellfade/synclair <new-project>`, then rename that clone's
-> `origin` remote to `upstream` before adding the new project's own private
-> `origin`. Do not use the public `npx synclair new` shortcut for Cellfade work;
-> it clones the public lineage rather than Cellfade's reviewed foundation. The
-> complete internal procedure is in [`cellfade-adoption.md`](cellfade-adoption.md).
+> `npx synclair new --cellfade-foundation <new-project>`. This temporary,
+> explicit migration path clones only `cellfade/synclair` and wires it as
+> `upstream`; bare `npx synclair new` fails closed while the private
+> `@cellfade/create-synclair` factory is being released. The complete internal
+> procedure is in [`cellfade-adoption.md`](cellfade-adoption.md).
 
 > **Where this sits in the two axes** ([`setup-modes.md`](setup-modes.md)): this doc is
 > the **fresh-seed** path — you reseed a brand/identity from scratch rather than intaking
@@ -27,13 +27,14 @@ spine it follows.
 ## 1. Clone the foundation (keep its history)
 
 ```bash
-npx synclair new <new-project>           # clones + wires the mother repo as `upstream`
+npx synclair new --cellfade-foundation <new-project>
 cd <new-project>
 git remote add origin <the-project's-own-repo-url>   # when it exists; push here
 ```
 
-(`npx synclair new` is shorthand for `git clone https://github.com/joshuaiwata/synclair.git`
-followed by `git remote rename origin upstream` — same result either way.)
+The explicit temporary command clones the private
+`https://github.com/cellfade/synclair.git` foundation and renames its `origin`
+to `upstream`. Bare `new` never falls back to the public lineage.
 
 The project's history begins on top of the foundation's — deliberate: shared
 ancestry is what makes pulling future foundation updates an ordinary 3-way
@@ -52,11 +53,13 @@ knowledge sources, Figma data, the project's domain skill/agent, product-spec
 digests — and leaves the Brain, adapters, Synclair-skin, and registered UI components
 intact. The app still typechecks and runs (brand + knowledge just empty).
 
-## 3. Pick the platform adapter
+## 3. Declare the project surface
 
-Edit `lib/system/adapters/index.ts` — `web-shadcn` is the default. Swap in a
-different adapter (e.g. `react-native`) if the app targets another platform. The
-Synclair itself stays Next + shadcn regardless (foundation-model.md §2).
+Declare the app's surface in `lib/system/seed/surfaces.ts`; `web-shadcn` is the
+implicit default. The hub chooses a preview renderer per documented item with
+`adapterFor(item.surface)`, so multiple surfaces can coexist. Token export,
+project generation, and distribution use separate contracts. Synclair itself
+stays Next + shadcn regardless (foundation-model.md §2).
 
 ## 4. Reseed (per §8)
 
