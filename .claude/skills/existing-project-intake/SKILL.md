@@ -11,7 +11,7 @@ Synclair over an existing app starts as an empty hub. This skill fills it: five 
 
 **Works in both existing-project topologies** (`docs/setup-modes.md`): **watcher** — this clone sits *beside* the host as a sibling repo; and **embedded** — this clone sits *inside* the host repo at `./synclair`, so the host root is the **parent/ancestor** of cwd. The only thing that differs is the host `root` path you record in Phase 0 (sibling `"../acme-app"` vs. embedded `".."` / `"../apps/web"`); every digger takes the root as input, so the survey is identical either way.
 
-**Prerequisites** (else → `project-bootstrap` / `docs/existing-project.md` / `co-locate-synclair` first): this clone sits beside OR inside the host repo, `npm install` has run, and identity is reseeded (`lib/system/seed/project.ts` names the host product).
+**Prerequisites** (else → `project-bootstrap` / `docs/existing-project.md` / `co-locate-synclair` first): this clone sits beside OR inside the host repo, `npm ci` has run, and identity is reseeded (`lib/system/seed/project.ts` names the host product).
 
 **Division of labor is strict:** diggers READ the host and PROPOSE; only you (the main thread) WRITE files in this repo. Diggers never edit; you never bulk-read the host.
 

@@ -1,9 +1,9 @@
 # Using Synclair alongside an EXISTING project
 
-> **Cellfade internal path:** clone the private foundation with
-> `gh repo clone cellfade/synclair <project>-synclair`, then rename that clone's
-> `origin` remote to `upstream` before adding the companion hub's own private
-> `origin`. Do not use the public `npx synclair new` shortcut for Cellfade work.
+> **Cellfade internal path:** use the authenticated GitHub CLI to clone the
+> private foundation with
+> `gh repo clone cellfade/synclair <project>-synclair`. The public npm package
+> named `synclair` is unrelated and must not be used.
 > See [`cellfade-adoption.md`](cellfade-adoption.md) for sibling and embedded
 > procedures.
 
@@ -35,13 +35,14 @@ Synclair lives at **`localhost:4100/synclair`**, always.
 
 ```bash
 cd <parent-of-your-project>
-npx synclair new <project>-synclair      # clones + wires the mother repo as `upstream`
+gh repo clone cellfade/synclair <project>-synclair
 cd <project>-synclair
+git remote rename origin upstream
 git remote add origin <the-hub's-own-repo-url>   # optional, for backup
 ```
 
-(`npx synclair new` is shorthand for `git clone https://github.com/joshuaiwata/synclair.git`
-followed by `git remote rename origin upstream` — same result either way.)
+The authenticated command clones only the private Cellfade foundation. Renaming
+the remote to `upstream` keeps the foundation update path explicit.
 
 A sibling keeps the two git histories, lockfiles, and `node_modules` apart —
 nesting a second repo inside the host confuses agents and tooling. Keeping the
@@ -52,13 +53,15 @@ future foundation updates as an ordinary merge.
 `docs/new-project.md`, `docs/existing-project.md`, and
 `scripts/synclair-reset.sh`. If any are missing, you cloned a stale or wrong
 repo (a pre-Synclair prototype shape) — the source of record is
-`https://github.com/joshuaiwata/synclair`, default branch.
+`https://github.com/cellfade/synclair`, default branch `main`.
 
 ## 2. Blank and reseed
 
 ```bash
 scripts/synclair-reset.sh . --yes
-npm install
+npm ci
+npm run bootstrap:foundation
+npm run verify:foundation
 ```
 
 Then reseed per [`new-project.md`](new-project.md) §4, with the host project as

@@ -5,8 +5,9 @@ import { synclair } from "./routes"
 /**
  * How a component or usage example is DEPICTED in the gallery.
  *
- * This is the platform seam (see `docs/foundation-model.md` §4a). The active
- * platform adapter turns a `Preview` into what the gallery renders:
+ * This is the platform seam (see `docs/foundation-model.md` §4a). The hub
+ * selects a PreviewAdapter for the documented item's surface and renders this
+ * already-resolved `Preview` value:
  * - `live`  — a real node rendered inline. The default for the web-shadcn
  *             adapter, and reachable on React Native via react-native-web for
  *             presentational components.
@@ -70,7 +71,7 @@ export const route = (path: string, opts?: { title?: string; height?: number }):
 /**
  * The shape every colocated `<name>.docs.tsx` default-exports. Authored next to
  * the component in the same change that creates or modifies it, and rendered
- * generically by the tier's `/[name]` page via the active platform adapter.
+ * generically by the tier's `/[name]` page via the item's surface adapter.
  * Registered in `lib/system/docs.ts`.
  */
 export interface DocExample {

@@ -21,6 +21,7 @@
 #
 set -euo pipefail
 
+# Must match lib/system/lineage.ts; the foundation gate enforces this literal.
 UPSTREAM_URL="https://github.com/cellfade/synclair.git"
 UPSTREAM_BRANCH="main"
 
@@ -56,6 +57,12 @@ ensure_upstream() {
   if ! git remote get-url upstream >/dev/null 2>&1; then
     echo "› adding upstream remote: $UPSTREAM_URL"
     git remote add upstream "$UPSTREAM_URL"
+  fi
+  upstream_urls="$(git remote get-url --all upstream)"
+  if [[ "$upstream_urls" != "$UPSTREAM_URL" ]]; then
+    echo "error: upstream must resolve exactly to $UPSTREAM_URL; refusing to fetch." >&2
+    echo "fix: git remote set-url upstream $UPSTREAM_URL" >&2
+    exit 1
   fi
   git fetch -q upstream "$UPSTREAM_BRANCH"
 }

@@ -28,7 +28,7 @@ projects clone and reseed. The full architecture is
 | Layer | What | Where | Rule |
 |---|---|---|---|
 | **Brain** (portable) | token vocabulary, tiers, docs contract, search, AI setup, knowledge layer | `lib/system/*` (minus seed), `.claude/` | Keep generic — no project specifics leak in |
-| **Adapter** (swappable) | preview depiction, token export, distribution | `lib/system/adapters/*` | Swap `activeAdapter` to retarget; don't hardcode platform elsewhere |
+| **Preview adapter** (swappable) | render an already-resolved `Preview` inside the hub | `lib/system/adapters/*` | Select per surface with `adapterFor(surface)`; token export, distribution, and generation use separate contracts |
 | **Seed** (per project) | brand, theme, domain, knowledge sources, identity | `lib/system/seed/*`, domain skills, `knowledge/sources.ts`, `globals.css` | In THIS repo, kept blank — a fresh clone reseeds it |
 | **Hub skin** (fixed) | the UI itself | `app/*` routes, `components/blocks/app-sidebar` etc. | Always Next + shadcn; foundation, not product |
 
@@ -37,7 +37,7 @@ projects clone and reseed. The full architecture is
 - **No brand values in the Brain.** Colors/theme live in `lib/system/seed/` (e.g. `brand-ramps.ts`), never inlined into `tokens.ts`. Vocabulary in `tokens.ts`; values in seed. In this repo the seed is blank by design.
 - **Component layer boundary.** Synclair's own hub-skin components (sidebar, command palette, source editor, and the generic status/stat/header pieces the hub is built from) are `meta.layer: "foundation"` in `registry.json`. A project's own components are the default (`project`). Galleries + ⌘K show only `project`; foundation stays registered/documented but hidden. So a fresh clone's library reads empty until the project builds its own components — correct.
 - **Skills & agents carry the same layer split.** Every `.claude/skills/<name>/SKILL.md` and `.claude/agents/<name>.md` frontmatter declares `layer: foundation | project` (parsed by `lib/system/frontmatter.ts`, surfaced as the "Origin" badge on `/synclair/ai-setup`). **Foundation** capabilities ship with Synclair and sync from upstream (synclair-sync); **project** ones are the clone's own and never sync — like seed. In THIS repo everything is `foundation` by definition: the seed is the only project-specific layer, and it's blank. Absent ⇒ `project` (the default a clone's own new skill takes). Also declare `category:` — the `/synclair/ai-setup` grouping (`lib/system/capability-categories.ts`).
-- **Previews go through the adapter.** Doc previews are a `Preview` (`live()`/image/embed), rendered by `activeAdapter` — never a raw node. This is what lets the same contract serve a mobile target.
+- **Previews go through the adapter.** Doc authors resolve a `Preview` (`live()`/image/embed), then the hub renders it with `adapterFor(item.surface)` — never a raw node or a global adapter selector. This lets several surface adapters coexist in one project.
 - **Knowledge: link, don't copy.** Sources of record live in `lib/system/knowledge/sources.ts` (surfaced at `/knowledge`); the repo holds distilled digests, not raw docs.
 - **Rules become mechanism.** A convention that can be machine-checked should not
   live as prose alone — prose is advisory and erodes under volume; a checker fires

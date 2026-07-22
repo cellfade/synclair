@@ -5,14 +5,15 @@
 > components, and AI context, for humans and agents alike.
 >
 > This is the spec for turning Synclair from "a shadcn admin tool" into a
-> **platform-agnostic governance layer** that can be cloned as the starting
-> foundation for any project — web or mobile — while its own UI stays
+> **platform-agnostic governance layer** that can be pinned inside any product
+> repository — web or mobile — while its own UI stays
 > Next + shadcn + Tailwind.
 >
 > **Repo direction:** this repo *is* Synclair (the foundation). The
 > project-specific layer — brand ramps, the Figma
 > manifest, the domain skill/agent — is "seed" content that gets
-> extracted/reseeded. Each new project is a clone of Synclair.
+> extracted/reseeded. Each new project records an exact Synclair revision in
+> `synclair.project.json` and installs it at a declared path.
 
 This document is the boundary contract. Humans read it to understand what's
 reusable vs. what's this-project-only. Agents read it to know which files are
@@ -39,16 +40,13 @@ Three principles fix the architecture:
    humans and a machine-readable form for agents. They cannot drift because they
    derive from the same bytes.
 
-3. **Clone, sync deliberately.** The foundation is cloned as a project's
-   starting point and diverges freely — nothing syncs automatically, and the
-   project's seed never syncs at all. But clones keep the foundation as a git
-   `upstream` remote (ancestry preserved), so a project can *choose* to pull
-   foundation updates with an ordinary merge: seed conflicts resolve "keep
-   ours", Brain/Synclair-skin conflicts "take upstream's". The seed inventory (§8)
-   is the merge contract; the mechanism is `scripts/synclair-sync.sh` + the
-   `synclair-sync` skill. The reverse direction (promoting a project's
-   foundation improvement upstream, §"flywheel") becomes a cherry-pick + PR
-   for the same reason.
+3. **Pin, update deliberately.** Embedded projects install an exact foundation
+   revision at `synclair/` and record it in `synclair.project.json`; watcher
+   checkouts keep the foundation as their `upstream`. Manual and recommended
+   modes prepare reviewed update pull requests. Automatic mode may prepare a
+   verified update PR on schedule, but never merges or deploys it. The project's
+   seed never syncs upstream. The seed inventory (§8) remains the conflict and
+   ownership contract.
 
 **Non-goals:** Synclair is not a runtime dependency of the app, not a live
 playground bound to the app's stack, and not a package the app imports.
@@ -59,7 +57,7 @@ playground bound to the app's stack, and not a package the app imports.
 
 | Layer | What it is | Rate of change | On a new project |
 |---|---|---|---|
-| **Brain** (portable) | The governance model: token vocabulary + semantics, tiers, the docs contract, search, AI setup, the invention gate, and the **knowledge layer** (§9 — how project docs/PRDs/decks become agent context) | Stable across projects | Cloned, kept; content reseeded |
+| **Brain** (portable) | The governance model: token vocabulary + semantics, tiers, the docs contract, search, AI setup, the invention gate, and the **knowledge layer** (§9 — how project docs/PRDs/decks become agent context) | Stable across projects | Installed from a pinned revision; content reseeded |
 | **Adapter** (swappable) | The platform-specific seams: how a preview is *depicted*, how tokens are *exported*, how components are *distributed* | Swapped per target platform | Pick one: `web-shadcn`, `react-native`, `swiftui` |
 | **Synclair skin** (fixed) | The UI itself — routes, gallery, docs renderer, ⌘K, sidebar | Same on every project | Always Next + shadcn + Tailwind |
 
@@ -73,7 +71,7 @@ the *adapter* changes.
 
 Grounded in the current `lib/system` + `components` tree.
 
-### Brain — clone and keep
+### Brain — pin and keep
 - `lib/system/search-index.ts` — pure metadata index. Fully portable.
 - `lib/system/tiers.ts` — the Components / Blocks / Templates concept. Portable
   (only the prose "shadcn primitives" is web-flavored; reword per platform).
@@ -91,11 +89,12 @@ Grounded in the current `lib/system` + `components` tree.
   catalog *data* (`data/external-catalog.json`) is seed. Freshness is
   machine-checked by `scripts/check-host-drift.mjs` (`npm run check:host`).
 
-### Adapter — swap per platform
-- `lib/system/adapters/` — ✅ the platform seam: `types.ts` (`PlatformAdapter`),
+### Preview adapter — depict each platform in the hub
+- `lib/system/adapters/` — ✅ the gallery-preview seam: `types.ts` (`PreviewAdapter`),
   `web-shadcn.tsx` + `react-native.tsx` (render each `Preview.kind`), `index.ts`
   (`adapterFor(surface)` — a per-item registry keyed by surface platform, §5/§5b).
-  Add an adapter file here to target another platform.
+  Add a preview-adapter file here to depict another platform. These modules do
+  not generate project files or own framework delivery.
 - `lib/system/components.ts` — reads shadcn's `registry.json`. The
   `RegistryComponent` *shape* is brain; the **format it parses** is web-adapter.
 - `registry.json` + `public/r/*.json` — shadcn distribution format. Web-adapter.
@@ -122,9 +121,10 @@ Grounded in the current `lib/system` + `components` tree.
   composition (`components/library/preview-scenes.tsx`), embedded on doc pages via
   the `scene()` preview helper.
 - `app/layout.tsx` is the bare shared shell (html/body/fonts/theme only); the root
-  `app/page.tsx` simply redirects `/` to the hub. There is no co-located product
-  app — the product lives elsewhere (its own repo/app on its own server) and this
-  app only catalogs it.
+  `app/page.tsx` simply redirects `/` to the hub. There is no product route inside
+  the Synclair Next app. In embedded topology, the product commonly lives at
+  sibling directory `apps/web` in the same repository; in watcher topology it
+  lives in a separate repository. Either way it has its own app and server.
 - The product name is the one seed constant `project` (`lib/system/seed/project.ts`),
   read by the hub header; the mount point is the constant `SYNCLAIR_BASE`
   (`lib/system/routes.ts`), and every Synclair link goes through the `synclair()` helper.
@@ -133,16 +133,16 @@ Grounded in the current `lib/system` + `components` tree.
 
 ---
 
-## 4. The one refactor that unlocks platform-independence
+## 4. The preview boundary that unlocks platform-independence
 
-Two places bake in "Synclair == the app's stack." Generalize both and the model
-holds for mobile.
+The hub needs a portable preview value and a small renderer boundary. Token
+export and project delivery are related platform concerns, but they remain
+separate contracts.
 
 ### 4a. `ComponentDoc.render` → a `Preview` representation
 
-Today `DocExample.render` and `DocState.render` are `ReactNode` — i.e. the doc
-*executes* the component. Replace the raw node with an adapter-supplied union so
-a non-web adapter can hand back an image or embed instead:
+`DocExample.preview` and `DocState.preview` use a portable union that the
+document author resolves to a live node, image, embed, or code-only state:
 
 ```ts
 type Preview =
@@ -159,54 +159,51 @@ interface DocExample {
 }
 ```
 
-The web adapter implements `preview` as `{ kind: "live", node }` — nothing
-changes visually for this project. A mobile adapter implements it as `image` or
-`embed`. Everything else in `doc-types.ts` (props, states, notes) is untouched.
+Web documentation commonly authors `{ kind: "live", node }`; mobile
+documentation commonly authors `image` or `embed`. The selected
+`PreviewAdapter` only renders that already-resolved value inside the hub.
+Everything else in `doc-types.ts` (props, states, notes) is untouched.
 
-### 4b. Token bindings become an adapter export
+### 4b. Token bindings and export stay separate from previews
 
-`tokens.ts` keeps the values, semantics, and usage. The *class bindings*
-(`bg-primary`, `rounded-md`, `w-4`) move behind an adapter that turns a token
-into platform code:
+`tokens.ts` keeps the values, semantics, and usage. Platform-specific class or
+code bindings (`bg-primary`, `rounded-md`, `w-4`, native theme keys) may later
+move behind a dedicated token-export contract:
 
 - `web-shadcn` → Tailwind utility class + CSS custom property
 - `react-native` → StyleSheet value / a theme object key
 - `swiftui` → a `Color`/spacing constant
 
-The `figma-export-tokens` skill already emits many of these formats — the
-adapter is largely wiring that output into the gallery's swatch rendering.
+The `figma-export-tokens` skill already emits many of these formats. That export
+and any package/distribution mechanism are separate future seams; they are not
+responsibilities of `PreviewAdapter`.
 
 ---
 
-## 5. The PlatformAdapter interface
+## 5. The PreviewAdapter interface
 
-The whole swappable seam, in one shape:
+The hub's swappable gallery-preview seam, in one shape:
 
 ```ts
-interface PlatformAdapter {
+interface PreviewAdapter {
   id: "web-shadcn" | "react-native" | "swiftui"
 
-  /** Turn a design token into code the app consumes. */
-  exportToken(token: Token): { code: string; className?: string }
-
-  /** How a component is depicted in the gallery (see §4a). */
-  preview(item: RegistryComponent): Preview
-
-  /** How a component gets installed into the app. */
-  distribution: {
-    /** Command or snippet the gallery shows under "Install". */
-    install(name: string): string
-    /** How the registry is read (shadcn json | package | copy). */
-    format: "shadcn-registry" | "npm" | "copy"
-  }
+  /** Render one already-resolved Preview value inside the Synclair gallery. */
+  renderPreview(preview: Preview): ReactNode
 }
 ```
 
-The brain calls the adapter; it never imports platform code directly. ✅
+The brain calls the preview adapter; it never imports platform code directly. ✅
 Resolution is **per item, not per clone**: `lib/system/adapters/index.ts` keys
 adapters by surface platform (`adapterFor(item.surface)` — see §5b), so a
 single-platform project behaves like a global swap while a multi-surface
 project has adapters *coexisting*.
+
+`PreviewAdapter` is intentionally gallery-only. Project generation and delivery
+use separate framework-adapter contracts in the control plane; generator
+packages must not import or reuse this type. There is no deprecated
+`PlatformAdapter` alias because the existing symbol was internal to this seam
+and all consumers were migrated together.
 
 ## 5b. Surfaces — coexisting platforms
 
@@ -242,19 +239,23 @@ The invariants:
 
 ## 6. What "start a new project" does
 
-The `project-bootstrap` wizard becomes thin — it **clones this foundation** and
-**prunes**, rather than carrying its own snapshot (which is why it drifted):
+The repository-contained `project-bootstrap` skill is the manual wizard until
+the private factory is released:
 
-1. Clone the foundation repo as the project's starting point — keeping its
-   history, with the foundation as the `upstream` remote (`docs/new-project.md` §1).
-2. Interview: project name, brand, domain, **target platform**.
-3. Select the adapter (`web-shadcn` by default; `react-native` / `swiftui`).
-4. Reseed the brain: new brand tokens, empty registry, project domain skill.
-5. Seed project memory.
+1. Interview for product, framework, `apps/web` or root layout, delivery
+   strategy, topology, update mode, private repository, and preview boundary.
+2. Write and commit `synclair.project.json` with the governance seed before
+   application scaffolding.
+3. Create the application on a setup branch and install the exact approved
+   foundation revision at `synclair/` for the common embedded topology.
+4. Reseed identity, brand, surfaces, knowledge, and optional domain context.
+5. Verify product and Synclair independently, then publish a setup pull request.
+6. Observe an exact-SHA preview and stop before merge or production.
 
-The clone is the project's own, and it diverges. Nothing syncs automatically;
-when the project *wants* foundation updates, `synclair-sync` pulls them as an
-ordinary git merge (principle 3).
+The common Option A shape is `apps/web` plus `synclair/` in one protected
+product repository. Option B keeps its complete hub on a declared overlay and
+promotes only allowlisted product paths through a separate PR. Neither mode
+syncs or deploys automatically.
 
 ---
 
@@ -271,8 +272,9 @@ ordinary git merge (principle 3).
   sub-question: where the fallback image/embed comes from (Storybook vs. Expo
   Snack vs. captured screenshot vs. Figma frame).
 - **Where the Synclair routes live** — *resolved.* Synclair is a hub-only app
-  mounted at `/synclair`; the root `/` redirects there and no product app is
-  co-located (the product lives elsewhere, on its own server). The mount point is a
+  mounted at `/synclair`; the root `/` redirects there and no product route is
+  co-located inside the hub application. An embedded product may still share the
+  repository at `apps/web` while running on its own server. The mount point is a
   single swappable constant (`SYNCLAIR_BASE`), so relocating the hub remains a
   no-touch-links move.
 - **Multi-frontend products (monorepo web + mobile)** — *resolved.* Surfaces
@@ -461,13 +463,12 @@ system, and a migration story that categories 1–2 don't need.
 
 ## 12. Setup mode — embedded vs watcher
 
-A clone's relationship to the product it serves is captured explicitly, not
+A hub's relationship to the product it serves is captured explicitly, not
 re-guessed. There are exactly **two** modes, defined by repo **topology**:
 **`embedded`** (Synclair inside the product repo — one repo; new-project or
 co-located; two-way) and **`watcher`** (a separate repo beside the product — the
-sibling companion; one-way). "Standalone / new-project" is not a third mode — it
-is `embedded` before the product files land; the transient pre-setup state is the
-**blank / unresolved** marker.
+sibling companion; one-way). A standalone foundation checkout is not a third
+project topology; its pre-install state uses the **blank / unresolved** marker.
 
 The mode is named for topology, never for "sync," because the two syncs pull
 opposite ways (code↔knowledge tightness favors embedded; foundation-update ease

@@ -1,22 +1,24 @@
 #!/usr/bin/env node
 /**
- * synclair — scaffold a Synclair clone.
+ * synclair — guarded legacy entrypoint for the Cellfade foundation.
  *
  * Synclair is a foundation you CLONE, not a dependency you install: the source
- * transfers to you, nothing auto-updates. This CLI is just the front door —
- * it clones the mother repo, points `upstream` at it (so `synclair-sync` and
- * call-home work), and hands you the docs for reseeding.
+ * transfers to you, nothing auto-updates. New application creation is moving
+ * to the private @cellfade/create-synclair factory. Until that package is
+ * released, every `new` invocation fails closed and points to the authenticated
+ * GitHub CLI path.
  */
-import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
-
-const MOTHER_URL = "https://github.com/joshuaiwata/synclair.git"
+import { readFileSync } from "node:fs"
 
 const HELP = `synclair — a project foundation you clone, not a package you install
-https://synclair.dev · https://github.com/joshuaiwata/synclair
+https://github.com/cellfade/synclair
 
 Usage:
-  npx synclair new <dir>    Clone the foundation into <dir>, ready to reseed
+  node cli/bin/synclair.mjs --help
+  node cli/bin/synclair.mjs --version
+
+Application creation is disabled in this legacy source entrypoint. Use:
+  gh repo clone cellfade/synclair <dir>
 
 What you get: design tokens, a live component library (shadcn-style registry),
 UX docs, and an AI knowledge layer — served by an in-repo hub at /synclair,
@@ -31,46 +33,16 @@ After scaffolding:
 Updates are opt-in (nothing phones home): npm run call-home, synclair-sync skill.
 `
 
-function run(cmd, args, opts = {}) {
-  const r = spawnSync(cmd, args, { stdio: "inherit", ...opts })
-  if (r.status !== 0) process.exit(r.status ?? 1)
-}
-
-const [command, target] = process.argv.slice(2)
+const args = process.argv.slice(2)
+const [command] = args
 
 if (command === "new") {
-  if (!target) {
-    console.error("Usage: npx synclair new <dir>")
-    process.exit(1)
-  }
-  if (existsSync(target)) {
-    console.error(`✗ ${target} already exists — pick a fresh directory.`)
-    process.exit(1)
-  }
-  if (spawnSync("git", ["--version"], { stdio: "ignore" }).status !== 0) {
-    console.error("✗ git is required — install git and retry.")
-    process.exit(1)
-  }
-
-  console.log(`› Cloning the Synclair foundation into ${target}…`)
-  run("git", ["clone", MOTHER_URL, target])
-  // The clone is YOUR repo: the mother becomes `upstream` (for synclair-sync);
-  // `origin` is freed for wherever this project will live.
-  run("git", ["-C", target, "remote", "rename", "origin", "upstream"])
-
-  console.log(`
-✓ Foundation cloned. The source is yours (GPL-3.0) — next steps:
-
-  cd ${target}
-  npm install && npm run dev          # hub at http://localhost:4100/synclair
-
-  New project?      read docs/new-project.md   (reseed brand, identity, knowledge)
-  Existing app?     read docs/existing-project.md
-  Foundation updates stay opt-in:     npm run call-home
-
-  The mother repo is wired as the 'upstream' remote; add your own 'origin'
-  when you create the project's repo.
-`)
+  console.error(
+    "Synclair application creation has moved to the unreleased private " +
+      "@cellfade/create-synclair factory. For the manual pilot, use " +
+      "`gh repo clone cellfade/synclair <dir>` and follow docs/pilot-option-a.md."
+  )
+  process.exit(2)
 } else if (!command || command === "help" || command === "--help" || command === "-h") {
   console.log(HELP)
 } else if (command === "--version" || command === "-v") {

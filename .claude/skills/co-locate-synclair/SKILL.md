@@ -33,7 +33,7 @@ What it buys is ambient agent context. Weigh that honestly before doing it.
 
 | Variant | How | Foundation updates? |
 |---|---|---|
-| **Subtree** | `git subtree add --prefix synclair <synclair-remote> main` | **Kept** — `git subtree pull` later (adapt `synclair-sync` from clone-with-`upstream` to subtree) |
+| **Subtree** | `git subtree add --prefix synclair <synclair-remote> <exact-sha>` | **Kept** — reviewed `git subtree pull` later |
 | **Vendored** (disconnected) | copy the files in, `rm -rf synclair/.git` | **Gone** — frozen copy; re-vendor by hand to update |
 
 Both land the change on a **feature branch** of the product repo, reviewed via
@@ -44,7 +44,7 @@ is a GitHub *fork*: a fork only matters for the sibling model's `upstream` link.
 # in the product repo, on a branch
 git checkout -b add-synclair
 # --- subtree (keeps sync) ---
-git subtree add --prefix synclair <synclair-remote> main --squash
+git subtree add --prefix synclair <synclair-remote> <exact-foundation-sha> --squash
 # --- OR vendored (disconnected) ---
 cp -R ../acme-synclair ./synclair && rm -rf ./synclair/.git && git add synclair
 # then: commit → PR → merge
@@ -154,16 +154,14 @@ new-project clone that *is* the product.
 ## Operating the two apps
 
 ```bash
-npm install && npm run dev          # product — from root, as usual
-cd synclair && npm install && npm run dev   # hub — its own island, :<port>/synclair
+npm ci && npm run dev                       # product — from root, as usual
+cd synclair && npm ci && npm run dev        # hub — its own island, :4100/synclair
 ```
 
-**Port:** the hub defaults to **4100** but auto-bumps (4101/4102…) when the host
-app or other Synclair instances already hold the lower ports — a monorepo commonly
-lands the hub on 4101/4102. Take the port from `synclair/.claude/launch.json` /
-the dev server's own startup log, not the literal "4100" written throughout these
-docs. Do NOT "reclaim 4100" blindly in this mode — the process there may be the
-**host app**.
+**Port:** the hub is fixed at **4100** and fails fast on a collision. Do not
+reclaim that port blindly in embedded mode; the process may be another product
+or checkout. The preview helper must refuse unrelated listeners. Stop and
+resolve the port decision explicitly rather than killing another process.
 
 ## Verify (run in the product repo after wiring it up)
 
@@ -171,7 +169,7 @@ docs. Do NOT "reclaim 4100" blindly in this mode — the process there may be th
 - [ ] `npm run lint` — reports no `synclair/` files
 - [ ] product test run — does not pick up Synclair tests
 - [ ] product build/deploy output — `synclair/` absent
-- [ ] `cd synclair && npm run dev` — hub still serves (its port, default 4100 → may be 4101/4102)
+- [ ] `cd synclair && npm run dev` — hub serves at port 4100 or fails without touching an unrelated listener
 - [ ] `synclair/data/setup.json` reads `"mode": "embedded"`
 - [ ] an agent in the product repo can load a bridged skill (e.g. `product-spec`)
 

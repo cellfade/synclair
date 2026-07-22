@@ -5,10 +5,9 @@
 #
 # On a PR: a fast, diff-aware scan reports the catalog work THIS PR introduces
 # (uncataloged components, staled entries, unrendered items) as a sticky PR
-# comment. When there are gaps AND an ANTHROPIC_API_KEY secret is present, the
-# cataloger agent runs ON THE PR BRANCH and pushes the catalog + preview-scene
-# commit back, so the hub shows the new items before merge. Engineers run
-# nothing. Without the secret, only the advisory comment posts.
+# comment. It is deliberately read-only with respect to repository content and
+# receives no model/provider secret. Catalog fixes are prepared locally and
+# returned through the ordinary reviewed PR flow.
 #
 # This ships DORMANT: in a fresh clone / new-project mode (no host catalog) the
 # gate exits after a no-op scan and posts nothing. It activates once
@@ -27,9 +26,7 @@ name: Synclair catalog gate
 
 on:
   pull_request:
-    # The cheap gate scan runs on every push (synchronize); the cataloger agent
-    # job fires only on opened / reopened / ready-for-review (see its `if:`), so
-    # it lands one commit at a natural pause instead of racing each push.
+    # The cheap, read-only gate scan runs on every relevant PR update.
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "data/external-catalog.json"
@@ -37,8 +34,7 @@ on:
       # + add your host component source path(s) here, e.g. "src/**".
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: synclair-catalog-${{ github.event.pull_request.number }}
@@ -46,17 +42,21 @@ concurrency:
 
 jobs:
   gate:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     outputs:
       has_gaps: ${{ steps.gate.outputs.has_gaps }}
       has_catalog: ${{ steps.gate.outputs.has_catalog }}
       gap_files: ${{ steps.gate.outputs.gap_files }}
+      report_b64: ${{ steps.report.outputs.report_b64 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
 
@@ -67,10 +67,29 @@ jobs:
         id: gate
         run: node scripts/ci-pr-catalog-check.mjs /tmp/changed.txt
 
+      - name: Encode inert report for isolated commenter
+        id: report
+        if: steps.gate.outputs.has_catalog == 'true'
+        run: echo "report_b64=$(base64 -w 0 /tmp/synclair-catalog-comment.md)" >> "$GITHUB_OUTPUT"
+
+  # This job receives only inert scan output. It never checks out or executes PR
+  # code, so the narrowly scoped comment token is isolated from untrusted code.
+  comment:
+    needs: gate
+    if: needs.gate.outputs.has_catalog == 'true'
+    permissions:
+      contents: none
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decode catalog report
+        env:
+          REPORT_B64: ${{ needs.gate.outputs.report_b64 }}
+        run: printf '%s' "$REPORT_B64" | base64 --decode > /tmp/synclair-catalog-comment.md
+
       # Dormant in blank / new-project clones: only comment where a host catalog
       # exists (so the foundation's own PRs stay quiet).
       - name: Post sticky PR comment
-        if: steps.gate.outputs.has_catalog == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -78,79 +97,3 @@ jobs:
             --repo "${{ github.repository }}" \
             --edit-last --create-if-none \
             --body-file /tmp/synclair-catalog-comment.md
-
-  catalog:
-    needs: gate
-    # Only when there's real work AND the PR is non-draft at a "ready" moment —
-    # never on a mid-iteration push, so the bot's commit doesn't race the
-    # engineer's. Skips entirely without the ANTHROPIC_API_KEY secret.
-    if: >
-      needs.gate.outputs.has_gaps == 'true' &&
-      github.event.pull_request.draft == false &&
-      (github.event.action == 'opened' ||
-       github.event.action == 'reopened' ||
-       github.event.action == 'ready_for_review')
-    runs-on: ubuntu-latest
-    env:
-      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
-    steps:
-      - name: Skip notice (no API key)
-        if: env.HAS_KEY != 'true'
-        run: echo "::notice::ANTHROPIC_API_KEY secret not set — auto-cataloging skipped. Gaps are listed in the PR comment; catalog manually with the component-cataloger skill, or add the secret."
-
-      - uses: actions/checkout@v4
-        if: env.HAS_KEY == 'true'
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      - name: Run the cataloger agent on this branch
-        if: env.HAS_KEY == 'true'
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Paths below are repo-root-relative (Synclair at the root). If Synclair
-          # is embedded at ./synclair, prefix each with `synclair/`.
-          prompt: |
-            You are running the Synclair catalog gate on a PR branch of this repo.
-            The diff-aware scan found catalog work this PR introduces, in these
-            host files (repo-root-relative): ${{ needs.gate.outputs.gap_files }}
-
-            Follow the method in .claude/agents/component-cataloger.md and the
-            schema in lib/system/external.ts exactly:
-            1. For each listed file not yet in data/external-catalog.json: read
-               the source fully, derive props from the types, decide the tier
-               (component/block/template — read .claude/agents/tier-arbiter.md if
-               unsure), grep the host for real usage, compute the sha256
-               sourceHash, and add the entry (catalogedAt = today).
-            2. For each listed file that already has an entry: refresh its
-               sourceHash and catalogedAt; touch description/notes only if the
-               change matters to them.
-            3. For every entry you added: write a Path A live-import preview scene
-               in components/host-previews/<name>.preview.tsx (import the host's
-               real component via the @host/* alias, matching the existing
-               *.preview.tsx files) and register it in
-               components/host-previews/registry.tsx.
-            4. Verify: run `node scripts/check-host-drift.mjs` and
-               `node scripts/check-host-coverage.mjs` — the entries you touched
-               must be fresh, and nothing you added may appear as documented-but-
-               not-rendered.
-            Do not commit — the workflow commits after you. Keep changes limited
-            to data/external-catalog.json and components/host-previews/.
-          claude_args: "--max-turns 80"
-
-      - name: Commit and push catalog updates
-        if: env.HAS_KEY == 'true'
-        run: |
-          git config user.name "synclair-catalog-bot"
-          git config user.email "noreply@anthropic.com"
-          git add data/external-catalog.json components/host-previews/
-          if git diff --cached --quiet; then
-            echo "Cataloger made no changes."
-          else
-            git commit -m "Synclair: catalog updates for this PR (automated)
-
-          Generated by the synclair-catalog workflow: entries + preview scenes
-          for the component files this PR introduced or touched."
-            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
-          fi

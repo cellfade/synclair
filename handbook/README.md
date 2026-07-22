@@ -38,8 +38,10 @@ not own them.
 
 ## First-time hosting setup (one-time, on the Mintlify dashboard)
 
-1. Sign in at [mintlify.com](https://mintlify.com) (Starter plan — free for a public repo).
-2. Connect the `joshuaiwata/synclair` repo and point it at this **`handbook/`** directory.
+1. Sign in at [mintlify.com](https://mintlify.com) with a plan and GitHub connection
+   that support the private Cellfade repository.
+2. Connect the private `cellfade/synclair` repo and point it at this
+   **`handbook/`** directory.
 3. Set the custom domain to `docs.synclair.dev` and add the CNAME Mintlify provides.
 4. Add a prominent **Docs** link from the `synclair.dev` marketing site (on Hatchable)
    to `docs.synclair.dev` so the two read as one product.

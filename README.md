@@ -1,11 +1,12 @@
 # Synclair
 
 > **Cellfade foundation repository.** For Cellfade projects, clone the private
-> `cellfade/synclair` repository instead of running the public `npx synclair new`
-> command. This keeps Cellfade's reviewed foundation lineage and safety fixes in
-> the update path. See [`docs/cellfade-adoption.md`](docs/cellfade-adoption.md).
+> `cellfade/synclair` repository through the explicit private command below.
+> The public npm package named `synclair` is unrelated and must not be used.
+> This keeps Cellfade's reviewed foundation
+> lineage and safety fixes in the update path. See
+> [`docs/cellfade-adoption.md`](docs/cellfade-adoption.md).
 
-[![npm](https://img.shields.io/npm/v/synclair)](https://www.npmjs.com/package/synclair)
 [![license](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 
 **A project foundation you clone, not a package you install — built for teams
@@ -14,10 +15,16 @@ design tokens, components, views, and distilled product knowledge — served by
 an in-repo hub that humans browse and agents load. <https://synclair.dev>
 
 ```
-npx synclair new my-project
-cd my-project
-npm install && npm run dev    # hub at http://localhost:4100/synclair
+gh repo clone cellfade/synclair my-project-synclair
+cd my-project-synclair
+npm ci
+npm run bootstrap:foundation
+npm run verify:foundation
+npm run dev    # hub at http://localhost:4100/synclair
 ```
+
+This authenticated clone is the supported pilot path until the private
+`@cellfade/create-synclair` factory passes its release gate.
 
 ## The problem
 
@@ -81,12 +88,12 @@ A concrete session looks like this:
 
 ## Get started
 
-Three topologies, one foundation ([`docs/setup-modes.md`](docs/setup-modes.md)):
+Two topologies, one foundation ([`docs/setup-modes.md`](docs/setup-modes.md)):
 
 | You have… | Do this | Guide |
 |---|---|---|
-| **Nothing yet** — new project | `npx synclair new my-project` — the clone *is* the repo; your product grows at `/`, the hub lives at `/synclair` | [`docs/new-project.md`](docs/new-project.md) |
-| **An existing app**, keep repos separate | `npx synclair new my-app-synclair` as a **sibling** directory — Synclair observes and documents the host, on its own server (port 4100), nothing lands in your repo | [`docs/existing-project.md`](docs/existing-project.md) |
+| **Nothing yet** — new project | Start from an authenticated `gh repo clone cellfade/synclair`; use the manual Option A pilot until the private factory is released | [`docs/pilot-option-a.md`](docs/pilot-option-a.md) |
+| **An existing app**, keep repos separate | `gh repo clone cellfade/synclair my-app-synclair` as a **sibling** directory — Synclair observes and documents the host, on its own server (port 4100), nothing lands in your repo | [`docs/existing-project.md`](docs/existing-project.md) |
 | **An existing repo**, one-repo team | Embed it at `./synclair` via git subtree so the whole team (and their agents) get it by cloning | `co-locate-synclair` skill in the clone |
 
 Then open your agent **in the clone** and say what you want:
@@ -101,7 +108,9 @@ playbook via [`AGENTS.md`](AGENTS.md) — it's plain markdown, agent-neutral.
 
 ## What's in the hub
 
-Everything renders at `/synclair` (your product lives at `/`):
+The hub renders at `/synclair`. In a standalone foundation checkout, `/`
+redirects there; in the common Option A project, the product is an independent
+app at `apps/web`:
 
 | Route | What it is |
 |---|---|
@@ -155,8 +164,9 @@ auto-updates. When you *want* updates from this repo:
 
 - `npm run call-home` — opt-in freshness check: is your foundation behind,
   and what's incoming? Also surfaced on `/synclair/environment`.
-- The `synclair-sync` skill — pulls foundation updates as a deliberate git
-  merge. Your seed never syncs, in either direction.
+- Watcher/foundation checkouts use the `synclair-sync` skill for a deliberate
+  merge. Embedded projects pin an exact revision and receive reviewed subtree
+  update PRs. Your seed never syncs upstream in either topology.
 
 ## FAQ
 

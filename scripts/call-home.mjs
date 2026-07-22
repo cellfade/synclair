@@ -19,6 +19,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+// Must match lib/system/lineage.ts; the foundation gate enforces this literal.
 const MOTHER_REPO = "cellfade/synclair";
 const MOTHER_PATH = path.join(process.cwd(), "data", "mother.json");
 

@@ -1,16 +1,17 @@
 {
-  "name": "synclair",
+  "name": "@cellfade/synclair-legacy",
+  "private": true,
   "version": "0.1.0",
-  "description": "Scaffold a Synclair clone — a project foundation with design tokens, a live component library, and an AI knowledge layer. Clone it, seed it, and every agent starts oriented.",
+  "description": "Guarded legacy entrypoint for the private Cellfade Synclair foundation while application creation moves to @cellfade/create-synclair.",
   "bin": { "synclair": "./bin/synclair.mjs" },
   "type": "module",
   "files": ["bin"],
   "engines": { "node": ">=18" },
   "license": "GPL-3.0-or-later",
-  "homepage": "https://synclair.dev",
+  "homepage": "https://github.com/cellfade/synclair",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/joshuaiwata/synclair.git",
+    "url": "git+https://github.com/cellfade/synclair.git",
     "directory": "cli"
   },
   "keywords": [

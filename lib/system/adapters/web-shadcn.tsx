@@ -1,7 +1,7 @@
 import { EmbedFrame } from "@/components/embed-frame"
 
 import type { Preview } from "../doc-types"
-import type { PlatformAdapter } from "./types"
+import type { PreviewAdapter } from "./types"
 
 /**
  * The default Synclair adapter. The hub and the app share a web/shadcn/Tailwind
@@ -9,7 +9,7 @@ import type { PlatformAdapter } from "./types"
  * are supported too, so a doc can fall back to a screenshot or Storybook frame
  * for anything not worth rendering live.
  */
-export const webShadcnAdapter: PlatformAdapter = {
+export const webShadcnAdapter: PreviewAdapter = {
   id: "web-shadcn",
 
   renderPreview(preview: Preview) {

@@ -1,6 +1,6 @@
 import type { Preview } from "../doc-types"
 import { getSurfaces } from "../surfaces"
-import type { PlatformAdapter } from "./types"
+import type { PreviewAdapter } from "./types"
 import { webShadcnAdapter } from "./web-shadcn"
 
 /**
@@ -43,7 +43,7 @@ function rnWebAvailable(): boolean {
   }
 }
 
-export const reactNativeAdapter: PlatformAdapter = {
+export const reactNativeAdapter: PreviewAdapter = {
   id: "react-native",
 
   renderPreview(preview: Preview) {

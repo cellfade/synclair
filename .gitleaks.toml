@@ -1,0 +1,8 @@
+title = "Synclair secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Exclude only the inert negative-test fixture from clean-tree scans"
+paths = ['''^test/fixtures/secrets/fake-github-token\.txt$''']

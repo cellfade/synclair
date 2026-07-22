@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": 1,
+  "cliVersionFile": "tools/vercel-cli.version",
+  "scope": {
+    "kind": "team",
+    "requireImmutableUserId": true,
+    "requireImmutableTeamId": true
+  },
+  "capabilities": {
+    "previewProtection": {
+      "required": true,
+      "fallback": "block-provider-delivery"
+    },
+    "stagedProduction": {
+      "required": true,
+      "fallback": "dashboard-observed"
+    },
+    "sandbox": {
+      "required": true,
+      "fallback": "local-cli-only"
+    },
+    "durableTransport": {
+      "required": true,
+      "fallback": "local-cli-only"
+    },
+    "database": {
+      "required": true,
+      "fallback": "approved-external-postgres"
+    }
+  },
+  "allowedStatuses": ["available", "unavailable", "not-checked"]
+}

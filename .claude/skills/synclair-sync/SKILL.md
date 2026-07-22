@@ -7,7 +7,10 @@ description: Pull foundation updates from the mother Synclair repo into this clo
 
 # Syncing with the mother Synclair repo
 
-The mother repo is **`https://github.com/joshuaiwata/synclair`** (`upstream`).
+The Cellfade mother repo is **`https://github.com/cellfade/synclair`**
+(`upstream` in downstream projects). The public
+`joshuaiwata/synclair` repository is lineage only and is never the executable
+update source for a Cellfade project.
 Doctrine (foundation-model.md, principle 3): **clone, sync deliberately** —
 nothing syncs automatically, the seed never syncs at all, and a project pulls
 foundation updates only when it chooses to, as an ordinary git merge.
@@ -74,7 +77,7 @@ scripts/synclair-sync.sh pull     # merge on a foundation-sync-<date> branch
 `upstream/main`, auto-keeps the seed, and lists what's left. Then:
 
 1. Resolve remaining conflicts per the table above; `git commit --no-edit`.
-2. `npm install` (if package files changed) and **`npm run verify-ui`**.
+2. `npm ci` (if package files changed) and **`npm run verify-ui`**.
 3. Bring the app up (preview-server skill) and check the hub renders with the
    project's own branding intact — if the merge turned anything neutral/blank
    that used to be branded, a seed file was resolved the wrong way.

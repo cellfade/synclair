@@ -35,19 +35,21 @@ the seed, and reseeds it to a working hub. The steps below are what it does unde
 Synclair and the product share a repo, so every agent working in it gets the hub,
 skills, and guardrails ambiently. You reach this topology two ways:
 
-- **Starting fresh** — the clone *becomes* your product repo; you build the app in it.
+- **Starting fresh** — create the product at `apps/web` and embed the exact
+  foundation revision at `synclair/` through the setup PR.
 - **An existing repo** — you **co-locate** Synclair at `./synclair`, isolated so the
   two apps' builds don't collide.
 
 <Steps>
   <Step title="Get the foundation into the repo">
-    Starting fresh:
+    Inspect or stage the private foundation source:
     ```bash
-    npx synclair new my-product   # clones the foundation into ./my-product
+    gh repo clone cellfade/synclair my-product-synclair
+    git -C my-product-synclair remote rename origin upstream
     ```
-    Existing repo: vendor Synclair at `./synclair` (the `co-locate-synclair` skill does
-    this and sets up the build isolation). Either way the foundation stays a git
-    `upstream` remote so you can pull updates later.
+    For both new and existing products, vendor the approved exact revision at
+    `./synclair` (the `co-locate-synclair` skill does this and sets up build
+    isolation). Use reviewed subtree/update PRs for later foundation changes.
   </Step>
   <Step title="Seed the hub">
     Starting fresh → reseed your brand: product name, color ramps, theme, optional
@@ -58,7 +60,9 @@ skills, and guardrails ambiently. You reach this topology two ways:
     Synclair runs on its **own** server at **port 4100**, mounted at `/synclair` —
     separate from the product's app even in one repo:
     ```bash
-    npm install && npm run dev   # http://localhost:4100/synclair
+    cd synclair
+    npm ci
+    npm run dev   # http://localhost:4100/synclair
     ```
   </Step>
 </Steps>
@@ -74,6 +78,8 @@ an existing app you'd rather not disturb.
     ```bash
     #   my-app/            ← the product, untouched
     #   my-app-synclair/   ← the Synclair companion clone
+    gh repo clone cellfade/synclair my-app-synclair
+    git -C my-app-synclair remote rename origin upstream
     ```
     The foundation stays a git `upstream` remote for pulling updates later.
   </Step>
