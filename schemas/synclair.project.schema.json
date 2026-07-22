@@ -1,0 +1,125 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/cellfade/synclair/schemas/synclair.project.schema.json",
+  "title": "Synclair project manifest V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "project", "repository", "application", "synclair", "deployment"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "slug", "summary"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 500 }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "name", "visibility", "defaultBranch", "setupBranch", "requirePullRequest"],
+      "properties": {
+        "owner": { "const": "cellfade" },
+        "name": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9_.-]*[a-z0-9])?$" },
+        "visibility": { "const": "private" },
+        "defaultBranch": { "const": "main" },
+        "setupBranch": { "type": "string", "pattern": "^codex/[A-Za-z0-9][A-Za-z0-9._-]*(?:/[A-Za-z0-9][A-Za-z0-9._-]*)*$" },
+        "requirePullRequest": { "const": true }
+      }
+    },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lifecycle", "framework", "layout", "rootDirectory"],
+      "properties": {
+        "lifecycle": { "enum": ["new", "existing"] },
+        "framework": { "enum": ["vite-react", "nextjs", "astro", "other"] },
+        "layout": { "enum": ["apps/web", "root"] },
+        "rootDirectory": { "$ref": "#/definitions/safePath" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "layout": { "const": "apps/web" } } },
+          "then": { "properties": { "rootDirectory": { "const": "apps/web" } } }
+        },
+        {
+          "if": { "properties": { "layout": { "const": "root" } } },
+          "then": { "properties": { "rootDirectory": { "const": "." } } }
+        }
+      ]
+    },
+    "synclair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["topology", "path", "delivery", "foundation"],
+      "properties": {
+        "topology": { "enum": ["embedded", "watcher"] },
+        "path": { "$ref": "#/definitions/safeNestedPath" },
+        "delivery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy", "overlayBranch", "overlayPolicy"],
+          "properties": {
+            "strategy": { "enum": ["mainline", "overlay"] },
+            "overlayBranch": { "type": ["string", "null"] },
+            "overlayPolicy": { "type": ["string", "null"] }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "strategy": { "const": "mainline" } } },
+              "then": {
+                "properties": {
+                  "overlayBranch": { "type": "null" },
+                  "overlayPolicy": { "type": "null" }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "strategy": { "const": "overlay" } } },
+              "then": {
+                "properties": {
+                  "overlayBranch": { "const": "synclair/overlay" },
+                  "overlayPolicy": { "enum": ["shared-merge", "single-owner-rebase"] }
+                }
+              }
+            }
+          ]
+        },
+        "foundation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "commit", "updateMode"],
+          "properties": {
+            "repository": { "const": "cellfade/synclair" },
+            "commit": { "type": "string", "pattern": "^(?!0{40}$)[0-9a-f]{40}$" },
+            "updateMode": { "enum": ["manual", "recommended", "automatic"] }
+          }
+        }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "previewRequired", "productionAutoDeploy", "productionRequiresExplicitApproval"],
+      "properties": {
+        "provider": { "const": "vercel" },
+        "previewRequired": { "const": true },
+        "productionAutoDeploy": { "const": false },
+        "productionRequiresExplicitApproval": { "const": true }
+      }
+    }
+  },
+  "definitions": {
+    "safePath": {
+      "type": "string",
+      "pattern": "^(?:\\.|[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*)$"
+    },
+    "safeNestedPath": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*(?:/[A-Za-z0-9][A-Za-z0-9._-]*)*$"
+    }
+  }
+}

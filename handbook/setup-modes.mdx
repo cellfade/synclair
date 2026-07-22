@@ -14,9 +14,9 @@ named for topology.
 |  | **Embedded** | **Watcher** |
 |---|---|---|
 | **Topology** | Synclair lives *inside* the product repo (one repo) | Synclair is a *separate* repo *beside* the product (two repos) |
-| **How you get here** | The clone **is** the product (new project), or Synclair was dropped into an existing repo (co-located) | The default sibling companion clone |
+| **How you get here** | Synclair is added at `synclair/` in a new or existing product repo | The sibling companion clone |
 | **Direction** | **Two-way** — skills/knowledge travel with the code; agents get them ambiently | **One-way** — observes and documents the host; nothing lands in it |
-| **On disk** | `product/` with Synclair at the root or vendored at `product/synclair/` | `product/` and `product-synclair/` as peers |
+| **On disk** | `product/apps/web/` plus `product/synclair/` by default | `product/` and `product-synclair/` as peers |
 
 ```
 embedded (one repo)                 watcher (two repos)
@@ -60,10 +60,10 @@ consequence of that choice, not the label.
 
 ## "Standalone" is not a third mode
 
-A brand-new project that clones Synclair and builds the product *in the clone* is
-already **embedded** — the product and Synclair share one repo from commit one.
-"Standalone" is just embedded *before the product files have been added*. That
-pre-product state is a **blank / unresolved** marker, not a mode of its own.
+A brand-new project that places Synclair at `synclair/` is already **embedded** —
+the product and hub share one repository from the setup PR onward. A standalone
+foundation checkout is only a source/review state. Its pre-install state is a
+**blank / unresolved** marker, not a third topology.
 
 ## How the clone remembers its mode
 

@@ -1,7 +1,6 @@
 name: foundation-release-validation
 
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -19,7 +18,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node tools/install-actionlint.mjs
-      - run: node tools/install-gitleaks.mjs --install
-      - run: npm run build:foundation-manifest
+      - run: npm run bootstrap:foundation
       - run: npm run verify:foundation

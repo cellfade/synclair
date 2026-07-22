@@ -26,10 +26,9 @@ description: "The fast answers to the questions everyone asks first."
     Not necessarily — it depends on the **topology** you install with, one repo or two:
     - **Watcher (two repos)** — Synclair is a *separate repo beside* yours. Your repo is
       untouched; no monorepo. Recommended for existing apps.
-    - **Embedded (one repo)** — Synclair shares the repo. Either the clone *is* your repo
-      (a new project built in it), or Synclair is **co-located** — vendored into your
-      existing repo at `./synclair`, isolated so builds don't collide. Co-locating is the
-      only case that adds a subdirectory to your repo, and it's opt-in, not the default.
+    - **Embedded (one repo)** — Synclair is co-located at `./synclair` in a new or
+      existing product repository; `apps/web` is the default product root. It is
+      isolated so the two applications' builds do not collide.
   </Accordion>
 
   <Accordion title="Can I modify it to fit my setup?" icon="wrench">
@@ -60,11 +59,11 @@ description: "The fast answers to the questions everyone asks first."
     hub; only the *adapter* changes to depict and export for your platform.
   </Accordion>
 
-  <Accordion title="How do I get foundation updates after I've cloned?" icon="arrows-rotate">
-    Deliberately, never automatically. Your clone keeps the foundation as a git
-    `upstream` remote, so you pull improvements as an ordinary git merge when you want
-    them — handled by the `synclair-sync` skill. Your **seed** (brand, domain,
-    knowledge) never syncs in either direction.
+  <Accordion title="How do I get foundation updates?" icon="arrows-rotate">
+    Deliberately, through review. Watcher/foundation checkouts keep an `upstream`
+    remote and use `synclair-sync`; embedded products pin an exact revision and
+    receive subtree/update pull requests. Automatic mode may prepare a verified PR,
+    but it never merges or deploys. Your **seed** never syncs upstream.
   </Accordion>
 
   <Accordion title="Do I run it in production?" icon="server">

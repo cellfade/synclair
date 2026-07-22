@@ -1,8 +1,9 @@
 # Using Synclair alongside an EXISTING project
 
-> **Cellfade internal path:** clone the private foundation with
-> `npx synclair new --cellfade-foundation <project>-synclair`. Bare
-> `npx synclair new` fails closed while the private factory is being released.
+> **Cellfade internal path:** use the authenticated GitHub CLI to clone the
+> private foundation with
+> `gh repo clone cellfade/synclair <project>-synclair`. The public npm package
+> named `synclair` is unrelated and must not be used.
 > See [`cellfade-adoption.md`](cellfade-adoption.md) for sibling and embedded
 > procedures.
 
@@ -34,14 +35,14 @@ Synclair lives at **`localhost:4100/synclair`**, always.
 
 ```bash
 cd <parent-of-your-project>
-npx synclair new --cellfade-foundation <project>-synclair
+gh repo clone cellfade/synclair <project>-synclair
 cd <project>-synclair
+git remote rename origin upstream
 git remote add origin <the-hub's-own-repo-url>   # optional, for backup
 ```
 
-The explicit temporary command clones only
-`https://github.com/cellfade/synclair.git` and wires it as `upstream`; it never
-falls back to the public lineage.
+The authenticated command clones only the private Cellfade foundation. Renaming
+the remote to `upstream` keeps the foundation update path explicit.
 
 A sibling keeps the two git histories, lockfiles, and `node_modules` apart —
 nesting a second repo inside the host confuses agents and tooling. Keeping the
@@ -58,7 +59,9 @@ repo (a pre-Synclair prototype shape) — the source of record is
 
 ```bash
 scripts/synclair-reset.sh . --yes
-npm install
+npm ci
+npm run bootstrap:foundation
+npm run verify:foundation
 ```
 
 Then reseed per [`new-project.md`](new-project.md) §4, with the host project as

@@ -25,39 +25,23 @@ In the foundation checkout:
 - project identity, brand, knowledge, catalogs, reports, routes, and setup mode
   remain blank.
 
-In a downstream Cellfade product clone, `upstream` points to
-`cellfade/synclair`, so `synclair-sync` receives Cellfade's reviewed foundation
-instead of bypassing it for the public lineage.
+In a downstream watcher or foundation checkout, `upstream` points to
+`cellfade/synclair`. Embedded product repositories instead retain an explicit
+subtree/update path pinned to reviewed foundation commits.
 
-## Route A — create a new project from the foundation
+## Path 1 — create a new project from the foundation
 
-```bash
-gh repo clone cellfade/synclair <product-name>
-cd <product-name>
-git remote rename origin upstream
+Use the [`project-bootstrap`](../.claude/skills/project-bootstrap/SKILL.md)
+interview and the [manual Option A pilot](pilot-option-a.md). The common layout
+places the selected product framework at `apps/web`, installs the exact approved
+foundation commit at `synclair/`, commits `synclair.project.json` with the
+governance seed, and publishes application work only through the setup PR.
 
-gh repo create cellfade/<product-name> \
-  --private \
-  --source=. \
-  --remote=origin
+To inspect the private foundation source independently before the provider
+boundary, use `gh repo clone cellfade/synclair <foundation-checkout>`. That
+checkout is not the product repository.
 
-git config user.name cellfade
-git config user.email 44656818+cellfade@users.noreply.github.com
-
-scripts/synclair-reset.sh . --yes
-```
-
-Then reseed the product identity, theme, knowledge sources, product-spec
-digests, and surfaces per [`new-project.md`](new-project.md). The hub resolves a
-preview renderer per item with `adapterFor(item.surface)`; generation, token
-export, and distribution remain separate contracts.
-Record `data/setup.json` as `embedded` because the product and Synclair share one
-repository.
-
-Do not delete `.git` or squash away the inherited foundation history. Shared
-ancestry makes reviewed foundation updates ordinary merges.
-
-## Route B — attach beside an existing project
+## Path 2 — attach beside an existing project
 
 From the existing project's parent directory:
 
@@ -65,23 +49,34 @@ From the existing project's parent directory:
 gh repo clone cellfade/synclair <product-name>-synclair
 cd <product-name>-synclair
 git remote rename origin upstream
+git config user.name cellfade
+git config user.email 44656818+cellfade@users.noreply.github.com
+scripts/synclair-reset.sh . --yes
+node scripts/record-setup-mode.mjs watcher
+```
 
+Show `cellfade/<product-name>-synclair` and the planned private repository write.
+After explicit approval, authenticate, create it, and immediately read back its
+identity and visibility:
+
+```bash
+gh auth status
 gh repo create cellfade/<product-name>-synclair \
   --private \
   --source=. \
   --remote=origin
-
-git config user.name cellfade
-git config user.email 44656818+cellfade@users.noreply.github.com
-
-scripts/synclair-reset.sh . --yes
+gh repo view cellfade/<product-name>-synclair \
+  --json nameWithOwner,visibility,defaultBranchRef
 ```
 
-Reseed and run the existing-project intake against the sibling host repository.
-Record `data/setup.json` as `watcher`. The product repository remains untouched
-except for an optional pointer in its `AGENTS.md`.
+Stop if the reported owner or `visibility` is not exactly the approved private
+target. Repository creation does not authorize a push, PR, merge, or deployment.
 
-## Route C — attach inside an existing repository
+Reseed and run the existing-project intake against the sibling host repository.
+The product repository remains untouched except for an optional pointer in its
+`AGENTS.md`.
+
+## Path 3 — attach inside an existing repository
 
 Use a subtree so the product retains an explicit foundation update path:
 
@@ -91,7 +86,7 @@ git switch -c codex/add-synclair
 git subtree add \
   --prefix synclair \
   https://github.com/cellfade/synclair.git \
-  main \
+  "$FOUNDATION_SHA" \
   --squash
 ```
 
@@ -100,14 +95,18 @@ Then:
 1. keep `synclair/` out of the host's workspaces, TypeScript, lint, tests, and
    deployment inputs;
 2. install its dependencies only from inside `synclair/`;
-3. run `node synclair/scripts/bridge-agents.mjs` and commit the generated root
+3. run `synclair/scripts/synclair-reset.sh synclair --yes
+   --foundation-commit "$FOUNDATION_SHA"`;
+4. reseed identity, brand, surfaces, and knowledge;
+5. run `node synclair/scripts/record-setup-mode.mjs embedded`;
+6. run `node synclair/scripts/bridge-agents.mjs` and commit the generated root
    agent doorways;
-4. record `synclair/data/setup.json` as `embedded`;
-5. run existing-project intake using the host root;
-6. verify both the host and Synclair independently.
+7. run existing-project intake using the host root;
+8. verify both the host and Synclair independently.
 
 Foundation updates use `git subtree pull --prefix synclair
-https://github.com/cellfade/synclair.git main --squash` from a review branch.
+https://github.com/cellfade/synclair.git "$FOUNDATION_SHA" --squash` from a
+review branch after the target commit is reviewed.
 Do not run the clone-oriented `synclair-sync.sh` inside a subtree.
 
 ## Foundation maintenance
@@ -122,7 +121,7 @@ To review public-lineage updates in the foundation checkout:
 git fetch upstream main
 git switch -c codex/foundation-sync-YYYYMMDD
 git merge upstream/main
-npm install
+npm ci
 npm run verify-ui
 ```
 

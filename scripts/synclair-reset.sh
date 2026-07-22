@@ -6,20 +6,46 @@
 # skill. It resets exactly the SEED inventory from docs/foundation-model.md §8 and
 # leaves the Brain / adapter / hub-skin untouched.
 #
-# Usage:  scripts/synclair-reset.sh <project-dir> --yes
+# Usage:  scripts/synclair-reset.sh <project-dir> --yes [--foundation-commit <sha>]
 #         (run on a FRESH clone — it overwrites seed files and removes the
 #          construction domain skill/agent)
 #
 set -euo pipefail
 
 DIR="${1:-}"
-CONFIRM="${2:-}"
+if [[ -n "$DIR" ]]; then shift; fi
+
+CONFIRM=""
+FOUNDATION_COMMIT=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --yes)
+      CONFIRM="--yes"
+      shift
+      ;;
+    --foundation-commit)
+      if [[ $# -lt 2 || -z "${2:-}" ]]; then
+        echo "error: --foundation-commit requires a value" >&2
+        exit 1
+      fi
+      FOUNDATION_COMMIT="$2"
+      shift 2
+      ;;
+    *)
+      echo "error: unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
 
 if [[ -z "$DIR" || "$CONFIRM" != "--yes" ]]; then
   cat <<'USAGE'
 synclair-reset.sh — blank the Synclair seed for a new project.
 
-  Usage: scripts/synclair-reset.sh <project-dir> --yes
+  Usage: scripts/synclair-reset.sh <project-dir> --yes [--foundation-commit <sha>]
+
+Pass --foundation-commit when Synclair is embedded below a product repository;
+otherwise the parent product HEAD would be recorded as the foundation baseline.
 
 Resets (SEED — see docs/foundation-model.md §8):
   • lib/system/seed/project.ts       → generic "Your Product" identity
@@ -48,6 +74,20 @@ cd "$DIR"
 if [[ ! -f "lib/system/seed/brand-ramps.ts" || ! -f "lib/system/knowledge/types.ts" ]]; then
   echo "error: $DIR doesn't look like a Synclair clone (missing lib/system/seed or knowledge)." >&2
   exit 1
+fi
+
+if [[ -n "$FOUNDATION_COMMIT" ]]; then
+  if [[ ! "$FOUNDATION_COMMIT" =~ ^[0-9a-f]{40}$ || "$FOUNDATION_COMMIT" =~ ^0{40}$ ]]; then
+    echo "error: --foundation-commit must be a nonzero lowercase 40-character Git SHA" >&2
+    exit 1
+  fi
+else
+  GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -n "$GIT_ROOT" && "$(cd "$GIT_ROOT" && pwd -P)" != "$(pwd -P)" ]]; then
+    echo "error: embedded reset requires --foundation-commit <exact-cellfade-synclair-sha>" >&2
+    exit 1
+  fi
+  FOUNDATION_COMMIT="$(git rev-parse HEAD 2>/dev/null || true)"
 fi
 
 echo "› Blanking brand ramps…"
@@ -194,7 +234,7 @@ printf '{\n  "mode": null\n}\n' > data/setup.json
 
 echo "› Anchoring the call-home baseline to this clone's foundation commit (opt-in stays off)…"
 printf '{\n  "callHome": false,\n  "commit": "%s",\n  "syncedAt": "%s"\n}\n' \
-  "$(git rev-parse HEAD 2>/dev/null || true)" \
+  "$FOUNDATION_COMMIT" \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > data/mother.json
 
 echo "› Clearing project summaries + queue (keeping the machinery)…"
@@ -221,6 +261,6 @@ Now RESEED (interactive — the project-bootstrap skill guides this):
   4. Domain     — if domain-heavy, create <domain>-domain skill + <domain>-advisor
                   agent (was construction-*); else skip.
   5. Knowledge  — add real spec/PRD/Figma/deck sources to lib/system/knowledge/sources.ts.
-  6. Verify     — npm install && npm run dev (port 4100); load / (redirects to
+  6. Verify     — npm ci && npm run dev (port 4100); load / (redirects to
                   the hub), /synclair, /synclair/components, /synclair/knowledge.
 NEXT

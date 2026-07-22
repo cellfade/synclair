@@ -19,6 +19,7 @@
 /build
 /dist
 /tools/bin
+/docs/control-plane/vercel-capabilities.json
 
 # misc
 .DS_Store

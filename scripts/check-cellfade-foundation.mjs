@@ -148,13 +148,14 @@ const adoption = await text("docs/cellfade-adoption.md")
 const newProjectGuide = await text("docs/new-project.md")
 const existingProjectGuide = await text("docs/existing-project.md")
 const rootReadme = await text("README.md")
+const projectBootstrapSkill = await text(".claude/skills/project-bootstrap/SKILL.md")
 const handbookInstallation = await text("handbook/installation.mdx")
 const handbookReadme = await text("handbook/README.md")
 const handbookConfig = await text("handbook/docs.json")
 for (const heading of [
-  "Route A — create a new project from the foundation",
-  "Route B — attach beside an existing project",
-  "Route C — attach inside an existing repository",
+  "Path 1 — create a new project from the foundation",
+  "Path 2 — attach beside an existing project",
+  "Path 3 — attach inside an existing repository",
 ]) {
   expect(adoption.includes(heading), `adoption guide missing: ${heading}`)
 }
@@ -164,8 +165,9 @@ for (const [name, guide] of [
   ["handbook installation", handbookInstallation],
 ]) {
   expect(
-    guide.includes("npx synclair new --cellfade-foundation"),
-    `${name} must present the explicit private Cellfade command`,
+    guide.includes("gh repo clone cellfade/synclair") &&
+      !guide.includes("npx synclair new --cellfade-foundation"),
+    `${name} must present only the authenticated private Cellfade clone command`,
   )
 }
 expect(
@@ -193,14 +195,21 @@ for (const [name, guide] of [
   ["existing-project", existingProjectGuide],
 ]) {
   expect(
-    guide.includes("npx synclair new --cellfade-foundation"),
-    `${name} guide must use the explicit private Cellfade migration path`,
+    guide.includes("gh repo clone cellfade/synclair") &&
+      !guide.includes("npx synclair new --cellfade-foundation"),
+    `${name} guide must use only the authenticated private Cellfade clone path`,
   )
   expect(
     !guide.includes("https://github.com/joshuaiwata/synclair.git"),
     `${name} guide must not present public lineage as an executable clone source`,
   )
 }
+expect(
+  projectBootstrapSkill.includes("name: project-bootstrap") &&
+    projectBootstrapSkill.includes("synclair.project.json") &&
+    projectBootstrapSkill.includes("explicit approval before production"),
+  "project-bootstrap skill must create the reproducible manifest and preserve production approval",
+)
 
 const conflictStop = sync.indexOf("STOPPED: merge conflicts remain")
 const baselineStamp = sync.indexOf("# Stamp the call-home baseline")
@@ -225,4 +234,4 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log("Cellfade foundation clean: neutral seed, private lineage, adoption paths, and safety guards verified.")
+console.log("Cellfade foundation clean: neutral seed, private lineage, pilot paths, and safety guards verified.")

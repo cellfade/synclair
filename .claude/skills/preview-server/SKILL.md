@@ -7,9 +7,14 @@ description: Reliably start, stop, and recover the Synclair dev/preview server (
 
 # Running the Synclair preview server
 
-The dev server runs on the port in **`.claude/launch.json`** — **4100 by default**, but read the file rather than assuming: an **embedded** clone (Synclair inside a host repo / monorepo — `docs/setup-modes.md`) commonly runs on **4101/4102** because the host app and other `apps/*` already hold the lower ports. Everywhere this skill writes "4100," read "the port from `launch.json`." Two hard rules:
+The checked-in development contract is the fixed port **4100** (`npm run dev`
+passes it explicitly). The server does not silently select another port. Two
+hard rules:
 
-- **The port from `launch.json` is dedicated to THIS clone.** Reclaiming *that* port is safe. **But do not assume 4100 is ours** — in embedded/monorepo mode the process on 4100 is often the **host app**, not Synclair. Confirm the listener's `cwd` is this repo before reclaiming any port (the helper script does this; the "Wrong app" section below is the check).
+- **Do not assume 4100 is ours.** Confirm the listener's `cwd` is this repo
+  before reclaiming it. The helper refuses an unrelated process. If another app
+  legitimately owns 4100, do not kill it; stop and resolve the project-level
+  port decision explicitly.
 - **Port 3000 is reserved by another app on this machine — never touch it.** Never `pkill -f "next dev"` or kill by port 3000; that hits the wrong process. Only ever kill `next` processes whose cwd is this repo (the helper script does exactly that).
 
 ## Why it keeps failing (read this first)
@@ -27,7 +32,7 @@ So the golden rule is **reuse, don't restart**. Only reclaim a server that is ge
 
 ## The helper
 
-`scripts/preview-server.sh` does the things the harness can't. It does **not** start the server (start it with a background Bash `npm run dev -- -p 4100` — see the procedure), and it **refuses to kill a healthy server** by default:
+`scripts/preview-server.sh` does the things the harness can't. It does **not** start the server (start it with background Bash `npm run dev` — see the procedure), and it **refuses to kill a healthy server** by default:
 
 ```
 scripts/preview-server.sh doctor    # diagnose + tell you the exact next action
@@ -46,7 +51,7 @@ scripts/preview-server.sh status    # raw state of :4100
    has recurring failures across every project on this machine (PATH/spawn bugs,
    sandbox panics — see the known-failures list). Instead:
    ```
-   npm run dev -- -p 4100        # Bash tool, run_in_background: true
+   npm run dev                   # Bash tool, run_in_background: true
    ```
    then wait ~6s and curl `http://localhost:4100/` for a 200 + correct `<title>`
    before calling it up. Point the user's preview/browser at `localhost:4100`.
@@ -67,9 +72,9 @@ scripts/preview-server.sh status    # raw state of :4100
   embedded/monorepo mode) the **host app** itself, can be on the port you expected
   (check the listener's `cwd`: `lsof -p <pid> | awk '$4=="cwd"'` and the served
   `<title>`). If its cwd is not this repo, **do not kill it** — it's the host app
-  or another project; let this clone take its own `launch.json` port instead (Next
-  auto-bumps, or set the port explicitly). Only kill a PID you've confirmed is a
-  stale checkout of *this* repo.
+  or another project. Stop and resolve the collision; the checked-in command
+  will not choose another port. Only kill a PID you've confirmed is a stale
+  checkout of *this* repo.
 - **`preview_start` spawn/PATH failures** — a known desktop-app bug class; don't
   debug it, use the Bash start above.
 

@@ -1,94 +1,136 @@
-# Starting a new project from Synclair
+# Starting a new project with Synclair
 
-> **Cellfade internal path:** clone the private foundation with
-> `npx synclair new --cellfade-foundation <new-project>`. This temporary,
-> explicit migration path clones only `cellfade/synclair` and wires it as
-> `upstream`; bare `npx synclair new` fails closed while the private
-> `@cellfade/create-synclair` factory is being released. The complete internal
-> procedure is in [`cellfade-adoption.md`](cellfade-adoption.md).
+> **Cellfade internal path:** use the authenticated GitHub CLI for foundation
+> access: `gh repo clone cellfade/synclair <foundation-checkout>`. The public npm
+> package named `synclair` is unrelated and must not be used. For an actual new
+> product, follow the reviewed [manual Option A pilot](pilot-option-a.md) rather
+> than turning a foundation checkout into the product repository.
 
-> **Where this sits in the two axes** ([`setup-modes.md`](setup-modes.md)): this doc is
-> the **fresh-seed** path — you reseed a brand/identity from scratch rather than intaking
-> from existing code. It describes the common **embedded** bundle (the product grows
-> inside the clone, one repo), but the *seeding* steps here are independent of topology.
-> Adopting Synclair onto an app that already exists instead? See
-> [`existing-project.md`](existing-project.md).
+This is the fresh-seed path: create a new product, place its selected frontend at
+`apps/web`, and embed Synclair at `synclair/`. The product and collaboration hub
+share one GitHub repository but remain separate applications with independent
+dependencies, verification, and Vercel roots.
 
-This is the **clone-and-prune** procedure — the operational half of
-[`foundation-model.md`](foundation-model.md) §6. It replaces the old "carry a
-snapshot" approach: a new project **clones the live Synclair foundation**, blanks
-the seed, and reseeds. There is no snapshot to drift, because the procedure and
-the foundation are the same repo.
+Adopting Synclair onto code that already exists instead? See
+[`existing-project.md`](existing-project.md). The topology and delivery axes are
+defined in [`setup-modes.md`](setup-modes.md).
 
-The interactive version (interview → reseed → provision → memory → verify) is
-driven by the global **`project-bootstrap`** skill; this doc is the mechanical
-spine it follows.
+## 1. Capture the setup before scaffolding
 
-## 1. Clone the foundation (keep its history)
+Run the repository-contained `project-bootstrap` skill. It interviews for the
+product, framework, layout, Option A or Option B delivery, embedded or watcher
+topology, update policy, private GitHub repository, and Vercel preview boundary.
+
+Review and commit the resulting `synclair.project.json` with the governance
+seed. For the common Option A path it must declare:
+
+- `application.layout: "apps/web"`;
+- `synclair.topology: "embedded"`;
+- `synclair.path: "synclair"`;
+- `synclair.delivery.strategy: "mainline"`;
+- the foundation's exact 40-character commit SHA;
+- private visibility, PR review, preview required, production auto-deploy off.
+
+## 2. Seed governance first
+
+Create the private product repository only after explicit approval. Put README,
+repository rules documentation, CI shell, CODEOWNERS, and
+`synclair.project.json` on initial `main` before any application code.
+
+Create `codex/synclair-setup` from that exact seed SHA. The application scaffold
+and Synclair installation belong on this setup branch and reach `main` only
+through a human-reviewed pull request.
+
+## 3. Scaffold the product at `apps/web`
+
+Use the one framework recorded in the manifest: Vite + React, Next.js, Astro, or
+an explicitly documented adapter. Commit its lockfile and fixed lint, typecheck,
+unit, build, and smoke commands.
+
+The first pilot creates only a shell, navigation, and one representative route.
+Do not invent backend, auth, database, billing, or extra product scope merely to
+exercise the foundation.
+
+## 4. Add the immutable foundation
+
+Resolve the approved foundation revision to `FOUNDATION_SHA`; never install from
+`main`, `latest`, or another mutable name.
 
 ```bash
-npx synclair new --cellfade-foundation <new-project>
-cd <new-project>
-git remote add origin <the-project's-own-repo-url>   # when it exists; push here
+git subtree add \
+  --prefix synclair \
+  https://github.com/cellfade/synclair.git \
+  "$FOUNDATION_SHA" \
+  --squash
 ```
 
-The explicit temporary command clones the private
-`https://github.com/cellfade/synclair.git` foundation and renames its `origin`
-to `upstream`. Bare `new` never falls back to the public lineage.
+Authenticated HTTPS access can be connected with `gh auth setup-git`. Never put
+a credential in the remote URL, manifest, or command history.
 
-The project's history begins on top of the foundation's — deliberate: shared
-ancestry is what makes pulling future foundation updates an ordinary 3-way
-merge (`scripts/synclair-sync.sh`, the `synclair-sync` skill) instead of a
-hand-port. Don't `rm -rf .git`; that orphans the clone and every later sync
-becomes an unrelated-histories slog.
-
-## 2. Blank the seed
+Reset the neutral seed before recording the project topology, and pass the exact
+foundation revision so the embedded checkout keeps the correct upstream
+baseline:
 
 ```bash
-scripts/synclair-reset.sh . --yes
+synclair/scripts/synclair-reset.sh synclair --yes --foundation-commit "$FOUNDATION_SHA"
 ```
 
-This resets exactly the seed inventory (foundation-model.md §8) — brand ramps,
-knowledge sources, Figma data, the project's domain skill/agent, product-spec
-digests — and leaves the Brain, adapters, Synclair-skin, and registered UI components
-intact. The app still typechecks and runs (brand + knowledge just empty).
+Reseed the project content, then record `synclair/data/setup.json` as `embedded`
+and generate the small ambient doorway at the product root:
 
-## 3. Declare the project surface
+```bash
+node synclair/scripts/record-setup-mode.mjs embedded
+node synclair/scripts/bridge-agents.mjs
+```
 
-Declare the app's surface in `lib/system/seed/surfaces.ts`; `web-shadcn` is the
-implicit default. The hub chooses a preview renderer per documented item with
-`adapterFor(item.surface)`, so multiple surfaces can coexist. Token export,
-project generation, and distribution use separate contracts. Synclair itself
-stays Next + shadcn regardless (foundation-model.md §2).
+The full skills and agents remain pinned in `synclair/.claude/`. Foundation
+updates use reviewed subtree/update pull requests; do not run the clone-oriented
+`synclair-sync.sh` inside a subtree.
 
-## 4. Reseed (per §8)
+## 5. Reseed Synclair
 
-| # | Reseed | Where |
-|---|---|---|
-| 1 | Identity | `lib/system/seed/project.ts` — `name` + `tagline` re-label Synclair's header (metadata derives from it) · then `package.json` name · `registry.json` homepage |
-| 2 | Theme | `app/globals.css` semantic/brand tokens; add ramps to `lib/system/seed/brand-ramps.ts` |
-| 3 | Domain | if domain-heavy, author `<domain>-domain` skill + `<domain>-advisor` agent; else skip |
-| 4 | Knowledge | add real spec/PRD/Figma/deck sources to `lib/system/knowledge/sources.ts`; fill `/AGENTS.md` router pointers |
-| 5 | Memory | seed a `project`-type memory + `MEMORY.md` pointer |
+Reseed the product-facing hub content after the reset in step 4:
 
-## 5. Provision & verify
+| Reseed | Location |
+|---|---|
+| Identity | `synclair/lib/system/seed/project.ts` and embedded hub package metadata |
+| Theme | `synclair/app/globals.css` and `synclair/lib/system/seed/brand-ramps.ts` |
+| Surfaces | `synclair/lib/system/seed/surfaces.ts`, pointing at `../apps/web` |
+| Knowledge | `synclair/lib/system/knowledge/sources.ts` and root `AGENTS.md` pointers |
+| Domain | Optional project-specific skill and agent inside the product-owned seed layer |
 
-- Skills/agents: keep the domain-neutral loadout (`build-view`, `component-library`,
-  `product-spec`, `prd-retriever`, plus the neutral agents); import `shadcn`,
-  `webapp-testing`, and Figma skills as needed.
-- Connect MCP servers (Drive/Notion/Figma) so diggers can fetch — `claude mcp` /
-  `/mcp` interactively, or claude.ai connector settings.
-- `npm install && npm run dev` (port 4100). Load `/` (redirects to the hub) and
-  Synclair: `/synclair`, `/synclair/components`, `/synclair/knowledge`,
-  `/synclair/foundations`; confirm they render and the registry/knowledge lists are
-  the new project's.
+The foundation's Brain, adapter seam, hub shell, registry, and neutral skills
+carry over. Brand, identity, product knowledge, catalogs, reports, and domain
+rules are fresh project seed and do not sync upstream.
 
-## What carries over vs. what's fresh
+## 6. Bootstrap and verify
 
-- **Carried (Brain + adapter + Synclair-skin):** token vocabulary, tiers, the docs
-  contract + `Preview`/adapter seam, search, the knowledge-layer machinery
-  (`AGENTS.md` router, manifest schema, `product-spec`, `prd-retriever`), the
-  Synclair routes, and the registered UI components. This is the value the
-  foundation carries between projects.
-- **Fresh (seed):** brand, theme, domain knowledge, knowledge sources, identity.
-  Reseeded per project; diverges freely with no sync back to Synclair.
+Install checksum-pinned local verification tools explicitly; they are not
+downloaded during `postinstall`:
+
+```bash
+npm --prefix synclair ci
+npm --prefix synclair run bootstrap:foundation
+npm --prefix synclair run verify:foundation
+```
+
+Run the product's committed gates from `apps/web` independently. Start the hub:
+
+```bash
+npm --prefix synclair run dev
+```
+
+Inspect `http://localhost:4100/synclair`, including navigation, search, mobile,
+and console health. The standalone hub's `/` redirects to `/synclair`; the
+product itself is served from `apps/web` by its own framework and deployment.
+
+## 7. Review, preview, and stop
+
+After explicit approval, push `codex/synclair-setup` and open a pull request.
+After a separate approval, use the pinned CLI preview procedure in the pilot
+runbook: defer Git integration, bind and read back the approved project identity,
+deploy `apps/web` without `--prod`, and review the exact-head-SHA preview.
+
+Stop with an open, reviewed PR and verified preview. Merge and production
+promotion require their own later approvals. See
+[`pilot-option-a.md`](pilot-option-a.md) for the full evidence and pass criteria.

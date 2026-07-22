@@ -1,7 +1,8 @@
-# Setup modes — embedded vs watcher
+# Setup axes — delivery strategy and topology
 
-> How a Synclair clone is wired to the product it serves. There are exactly
-> **two** operating modes, defined by repo **topology**. This is the design
+> Setup has two independent decisions: **Option A / Option B** selects how
+> reviewed changes reach `main`, while **embedded / watcher** records where the
+> hub lives relative to the product. This is the design
 > contract; the mechanism is `lib/system/setup.ts`, the marker is
 > `data/setup.json`, and the modes surface as a badge in the hub chrome.
 
@@ -12,14 +13,14 @@ skills ambiently, and how the hub frames what it documents. Recording it once,
 explicitly, means every agent and every page reads the same answer instead of
 re-guessing it.
 
-## The two modes
+## Topology: embedded vs watcher
 
 | | `embedded` | `watcher` |
 |---|---|---|
 | **Topology** | Synclair lives **inside** the product repo (one repo) | Synclair is a **separate** repo **beside** the product (two repos) |
-| **How you get here** | The clone **is** the product (new project built in it), **or** Synclair was dropped into an existing repo (`co-locate-synclair`) | The default sibling companion clone (`docs/existing-project.md`) |
+| **How you get here** | Synclair is added at `synclair/` in a new or existing product repo (`co-locate-synclair`) | The sibling companion clone (`docs/existing-project.md`) |
 | **Direction** | **Two-way** — skills/knowledge travel with the code; agents building in the repo get them ambiently | **One-way** — observes and documents the host; nothing lands in the host repo |
-| **On disk** | `product/` (with Synclair at the root, or vendored at `product/synclair/`) | `product/` and `product-synclair/` as peers |
+| **On disk** | `product/apps/web/` plus `product/synclair/` by default | `product/` and `product-synclair/` as peers |
 | **Install path** | `docs/new-project.md` · `co-locate-synclair` skill | `docs/existing-project.md` |
 
 ```
@@ -32,32 +33,43 @@ embedded (one repo)                 watcher (two repos)
    skills travel with code                              (one-way documentation)
 ```
 
-### Onboarding labels (the bootstrap skill's Mode A / B / C)
+## Delivery strategy: Option A vs Option B
 
-The interactive `project-bootstrap` flow presents **three** human-facing setup
-paths, but they are onboarding labels, not extra modes — each maps onto one of
-the two topologies above:
+Delivery strategy controls Git history and review; it does not change the
+topology marker.
 
-| Bootstrap label | What it is | Topology marker |
+| Option | Strategy | Use it when |
 |---|---|---|
-| **Mode A** — new project | the clone **is** the new repo | `embedded` |
-| **Mode B** — beside an existing app | sibling companion clone (two repos) | `watcher` |
-| **Mode C** — inside an existing repo / monorepo | co-located at `./synclair` (one repo) | `embedded` |
+| **Option A — mainline** | Synclair and product changes are reviewed in one setup PR, then live together on protected `main` | The common default for new products and most co-located projects |
+| **Option B — overlay** | The complete collaboration hub stays on `synclair/overlay`; only allowlisted product paths move through a separate PR to protected `main` | A team intentionally needs the ToolBelt-style review branch and accepts its extra refresh policy |
 
-So A and C both resolve to `embedded`, B to `watcher`. The marker records the
-**topology** (`embedded` / `watcher`), never the onboarding label — a "Mode C
-install" is an `embedded` clone. Keep the two vocabularies bridged here so the
-setup UI and the persisted marker never read as two different systems.
+Option B is experimental. A shared overlay refreshes by merge; a declared
+single-owner overlay may use force-with-lease after drift checks. Neither option
+rewrites protected `main`, merges automatically, or promotes production.
+
+### Onboarding paths
+
+The interactive `project-bootstrap` flow presents three descriptive setup paths.
+They are not delivery options; each independently selects a topology and then
+asks for Option A or Option B:
+
+| Setup path | What it is | Topology marker |
+|---|---|---|
+| **Path 1 — new project** | product and hub begin in one repository | `embedded` |
+| **Path 2 — sibling companion** | separate hub beside an existing app | `watcher` |
+| **Path 3 — co-located adoption** | hub added at `./synclair` inside an existing repository | `embedded` |
+
+Paths 1 and 3 resolve to `embedded`; Path 2 resolves to `watcher`. The marker
+records only the topology. The project manifest separately records the delivery
+strategy so agents never infer one decision from the other.
 
 ### Why "standalone / new-project" is not a third mode
 
-A brand-new project that clones Synclair and builds the product *in the clone*
-is **already `embedded`** — the product and Synclair share one repo from commit
-one. "Standalone" is just `embedded` **before the product files have been
-added**. Adding a third mode for the empty-but-will-be-embedded state would split
-one topology into two names and force every consumer to collapse them again.
-Instead, that pre-product state is the **blank / unresolved** marker (below), not
-a mode of its own.
+A brand-new project that adds Synclair at `synclair/` is **already `embedded`** —
+the product and hub share one repository from the setup PR onward. A standalone
+foundation checkout is only a source/review state, not a third project topology.
+Its marker stays **blank / unresolved** until a product installation records the
+real relationship.
 
 ## Name by topology, never by "sync"
 
@@ -125,8 +137,8 @@ first two by writing the marker authoritatively.
    | Neither | `null` (blank) | low |
 2. **Confirm** — detection is **never silently trusted**. The setup skill shows
    the proposed mode + its `signal` and asks the user to confirm or override.
-   *(This step is a documented seam today — see the TODO below — not yet an
-   interactive prompt.)*
+   The repository-contained `project-bootstrap` skill now performs this as a
+   manual interview; a future factory CLI will bind the same decision.
 3. **Record** — `recordSetupMode(mode, resolvedBy)` writes `data/setup.json`.
    Install paths call this directly with `resolvedBy: "install"`; a confirmed
    detection uses `"detected"`; an explicit override uses `"user"`.
@@ -136,13 +148,12 @@ that reach the hub without a marker. That ordering keeps the trusted source
 (install) primary and the heuristic (detection) as a safety net that still
 requires a human "yes".
 
-> **TODO (seam for the setup skill):** wire the interactive confirm. The
-> `project-bootstrap` / `existing-project-intake` / `co-locate-synclair` flows
-> should call `recordSetupMode(...)` at the end of setup (`resolvedBy:
-> "install"`). For a clone that boots unresolved, a skill should run
-> `detectSetupMode()`, surface the `signal`, confirm with the user, then record
-> with `resolvedBy: "detected"`. The detection logic is wired; only the
-> interactive prompt is pending.
+> **Manual-now / factory-later seam:** `project-bootstrap` /
+> `existing-project-intake` / `co-locate-synclair` confirm the topology and call
+> `recordSetupMode(...)` at the end of setup. For a checkout that boots
+> unresolved, the skill runs `detectSetupMode()`, surfaces the signal, confirms
+> with the user, then records with `resolvedBy: "detected"`. The future private
+> factory CLI will automate this same contract.
 
 ## How consumers use the mode
 

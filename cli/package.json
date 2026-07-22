@@ -1,5 +1,6 @@
 {
-  "name": "synclair",
+  "name": "@cellfade/synclair-legacy",
+  "private": true,
   "version": "0.1.0",
   "description": "Guarded legacy entrypoint for the private Cellfade Synclair foundation while application creation moves to @cellfade/create-synclair.",
   "bin": { "synclair": "./bin/synclair.mjs" },

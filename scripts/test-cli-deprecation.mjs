@@ -25,20 +25,17 @@ if (!`${blocked.stdout}${blocked.stderr}`.includes("@cellfade/create-synclair"))
 }
 
 const privateTarget = "private-foundation"
-const dryRun = invoke(["new", "--cellfade-foundation", privateTarget, "--dry-run"])
-if (dryRun.status !== 0) {
-  throw new Error(`private dry-run failed: ${dryRun.stderr}`)
+const deprecatedEscapeHatch = invoke(["new", "--cellfade-foundation", privateTarget, "--dry-run"])
+if (deprecatedEscapeHatch.status === 0 || existsSync(path.join(scratch, privateTarget))) {
+  throw new Error("the legacy --cellfade-foundation path must fail before creating a directory")
 }
-if (!dryRun.stdout.includes("https://github.com/cellfade/synclair.git")) {
-  throw new Error("private dry-run must resolve the Cellfade foundation")
-}
-if (existsSync(path.join(scratch, privateTarget))) {
-  throw new Error("private dry-run must not create a directory")
+if (!`${deprecatedEscapeHatch.stdout}${deprecatedEscapeHatch.stderr}`.includes("gh repo clone cellfade/synclair")) {
+  throw new Error("the legacy CLI must point to the authenticated private clone path")
 }
 
 const source = readFileSync(cli, "utf8")
-if (source.includes("joshuaiwata/synclair")) {
-  throw new Error("the private CLI execution path must not contain the public lineage clone URL")
+if (source.includes("git clone") || source.includes("CELLFADE_FOUNDATION_URL")) {
+  throw new Error("the guarded legacy CLI must not retain a clone execution path")
 }
 
-console.log("Legacy CLI guarded: bare new fails closed; explicit dry-run targets Cellfade only.")
+console.log("Legacy CLI guarded: every new command fails closed and points to authenticated GitHub clone guidance.")
