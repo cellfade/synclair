@@ -107,8 +107,9 @@ cat > lib/system/seed/foundation.ts <<'TS'
 /**
  * SEED (project-specific): the project's design foundation BEYOND color — the
  * companion of `brand-ramps.ts`. In existing-project mode the token dig writes
- * the HOST's fonts, type/spacing/radius, and any extra foundation categories
- * (logo, brand guidelines, iconography…) here as DATA. Empty by default.
+ * the HOST's fonts, type/spacing/radius, elevation, and any extra foundation
+ * categories (motion, iconography, brand guidelines…) here as DATA. Empty by
+ * default.
  */
 
 export interface FoundationFont {
@@ -124,25 +125,71 @@ export interface FoundationTypeStep {
   usage?: string
 }
 
+export interface FoundationTypeRole {
+  role: string
+  size: string
+  line?: string
+  weight?: string
+  mono?: boolean
+  sample?: string
+  usage?: string
+}
+
 export interface FoundationScaleStep {
   name: string
   px: string
   usage?: string
 }
 
+export interface FoundationShadowStep {
+  name: string
+  value: string
+  usage?: string
+}
+
+export interface FoundationMotion {
+  ease: { name: string; value: string }[]
+  durations: { name: string; ms: number }[]
+  moves?: { name: string; usage: string }[]
+}
+
+export interface FoundationIcon {
+  name: string
+  svg: string
+}
+
+export interface FoundationIcons {
+  markSvg?: string
+  markLabel?: string
+  glyphs?: FoundationIcon[]
+}
+
+export type FoundationGroup = "color" | "shape" | "motion" | "icon" | "extra"
+
 export interface FoundationSection {
   id: string
   label: string
   summary?: string
   body: string
+  group?: FoundationGroup
+}
+
+export interface FoundationSample {
+  vars: Record<string, string>
+  fontFamily?: string
 }
 
 export interface ProjectFoundation {
   fonts: FoundationFont[]
   type: FoundationTypeStep[]
+  typeRoles?: FoundationTypeRole[]
   radii: FoundationScaleStep[]
   spacing: FoundationScaleStep[]
+  elevation?: FoundationShadowStep[]
+  motion?: FoundationMotion
+  icons?: FoundationIcons
   sections: FoundationSection[]
+  sample?: FoundationSample
   notes?: string
 }
 

@@ -110,9 +110,19 @@ downloaded during `postinstall`:
 
 ```bash
 npm --prefix synclair ci
-npm --prefix synclair run bootstrap:foundation
-npm --prefix synclair run verify:foundation
+npm --prefix synclair run bootstrap:project
+npm --prefix synclair run verify:synclair
 ```
+
+`verify:synclair` checks the installed hub without applying the mother
+repository's neutral-seed or immutable-release-manifest assertions. Those
+assertions remain exclusive to `verify:foundation` in `cellfade/synclair`.
+Likewise, `bootstrap:project` installs the checksum-pinned local verification
+tools without rebuilding the mother repository's release manifest.
+
+Run the product gates separately from `apps/web`; the manual pilot does not yet
+claim the control plane's future aggregate `verify:product` / `verify:synclair`
+root commands.
 
 Run the product's committed gates from `apps/web` independently. Start the hub:
 

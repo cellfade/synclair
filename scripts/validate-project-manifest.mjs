@@ -41,6 +41,52 @@ export function parseSubtreeFoundationCommit(logText, expectedPath) {
   throw new Error(`Subtree provenance for ${expectedPath} was not found in Git history`)
 }
 
+function git(repositoryRoot, args) {
+  return spawnSync("git", args, { cwd: repositoryRoot, encoding: "utf8" })
+}
+
+export function readSubtreeFoundationCommit(repositoryRoot, expectedPath, { expectedTree } = {}) {
+  const history = git(repositoryRoot, ["rev-list", "--merges", "--parents", "HEAD"])
+  if (history.status !== 0) {
+    throw new Error(`Could not read subtree history: ${history.stderr.trim()}`)
+  }
+
+  for (const line of history.stdout.trim().split("\n").filter(Boolean)) {
+    const [mergeCommit, ...parents] = line.split(" ")
+    const mergedParents = parents.slice(1)
+    for (const candidate of mergedParents) {
+      const message = git(repositoryRoot, ["show", "-s", "--format=%B", candidate])
+      if (message.status !== 0) continue
+
+      let foundationCommit
+      try {
+        foundationCommit = parseSubtreeFoundationCommit(message.stdout, expectedPath)
+      } catch {
+        continue
+      }
+
+      const prefixTree = git(repositoryRoot, ["rev-parse", `${mergeCommit}:${expectedPath}`])
+      const candidateTree = git(repositoryRoot, ["rev-parse", `${candidate}^{tree}`])
+      const splitTree = expectedTree
+        ? { status: 0, stdout: expectedTree }
+        : git(repositoryRoot, ["rev-parse", `${foundationCommit}^{tree}`])
+      if (prefixTree.status !== 0 || candidateTree.status !== 0) continue
+      if (prefixTree.stdout.trim() !== candidateTree.stdout.trim()) continue
+      if (
+        splitTree.status !== 0 ||
+        candidateTree.stdout.trim() !== splitTree.stdout.trim()
+      ) {
+        throw new Error(
+          `Subtree provenance for ${expectedPath} does not match its pinned foundation tree`,
+        )
+      }
+      return foundationCommit
+    }
+  }
+
+  throw new Error(`Subtree provenance for ${expectedPath} was not found in Git history`)
+}
+
 function flagValue(args, flag) {
   const index = args.indexOf(flag)
   if (index < 0) return null
@@ -54,29 +100,36 @@ async function main() {
   const manifestPath = args.find((argument) => !argument.startsWith("--")) ?? "synclair.project.json"
   const manifest = JSON.parse(await readFile(path.resolve(manifestPath), "utf8"))
   await validateProjectManifest(manifest)
+  let remoteFoundationTree
 
   if (args.includes("--verify-remote")) {
     const expected = manifest.synclair.foundation.commit
     const resolved = spawnSync(
       "gh",
-      ["api", `repos/cellfade/synclair/commits/${expected}`, "--jq", ".sha"],
+      [
+        "api",
+        `repos/cellfade/synclair/commits/${expected}`,
+        "--jq",
+        "[.sha, .commit.tree.sha] | @tsv",
+      ],
       { encoding: "utf8" },
     )
     if (resolved.status !== 0) {
       throw new Error(`Could not verify the private foundation commit: ${resolved.stderr.trim()}`)
     }
-    await validateProjectManifest(manifest, { reachableCommit: resolved.stdout.trim() })
+    const [reachableCommit, tree] = resolved.stdout.trim().split("\t")
+    if (!tree?.match(/^[0-9a-f]{40}$/)) {
+      throw new Error("Could not verify the private foundation tree")
+    }
+    await validateProjectManifest(manifest, { reachableCommit })
+    remoteFoundationTree = tree
   }
 
   if (args.includes("--check-subtree")) {
     const repositoryRoot = flagValue(args, "--repository-root") ?? process.cwd()
-    const log = spawnSync(
-      "git",
-      ["log", "HEAD", "--format=%B%x00", "--", manifest.synclair.path],
-      { cwd: repositoryRoot, encoding: "utf8" },
-    )
-    if (log.status !== 0) throw new Error(`Could not read subtree history: ${log.stderr.trim()}`)
-    const installed = parseSubtreeFoundationCommit(log.stdout, manifest.synclair.path)
+    const installed = readSubtreeFoundationCommit(repositoryRoot, manifest.synclair.path, {
+      expectedTree: remoteFoundationTree,
+    })
     if (installed !== manifest.synclair.foundation.commit) {
       throw new Error(
         `Subtree foundation mismatch: manifest has ${manifest.synclair.foundation.commit}, installed ${installed}`,

@@ -208,9 +208,18 @@ full Synclair gate:
 
 ```bash
 npm --prefix synclair ci
-npm --prefix synclair run bootstrap:foundation
-npm --prefix synclair run verify:foundation
+npm --prefix synclair run bootstrap:project
+npm --prefix synclair run verify:synclair
 ```
+
+The embedded gate verifies the customized project hub, agent bridge, and shared
+foundation mechanics. It intentionally excludes the mother repository's
+neutral-seed and immutable-release-manifest assertions.
+The project bootstrap installs the pinned local tools but does not regenerate
+the mother repository's release manifest from the product Git tree.
+This command verifies Synclair only. The product's Vite gates remain separate
+below; the manual pilot is prerequisite evidence for, not completion of, the
+control plane's future aggregate verification task.
 
 Run the Vite pilot's committed gates independently. Its default `build` includes
 TypeScript; no unit-test command exists in the untouched scaffold, so record

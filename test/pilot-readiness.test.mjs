@@ -2,6 +2,16 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import test from "node:test"
 
+function expandScript(scripts, name, seen = new Set()) {
+  assert.ok(scripts[name], `missing npm script: ${name}`)
+  if (seen.has(name)) return ""
+  const nextSeen = new Set(seen).add(name)
+  return scripts[name].replace(
+    /npm run ([a-z0-9:-]+)/g,
+    (_command, dependency) => `${dependency} ${expandScript(scripts, dependency, nextSeen)}`,
+  )
+}
+
 test("pilot documentation uses the authenticated private clone path", async () => {
   const documents = await Promise.all(
     ["README.md", "docs/new-project.md", "docs/existing-project.md", "cli/README.md"].map(
@@ -42,14 +52,67 @@ test("one explicit bootstrap command installs pinned tools and builds the manife
   assert.doesNotMatch(packageJson.scripts.postinstall, /install-actionlint|install-gitleaks/)
 })
 
-test("installation guides place explicit bootstrap before foundation verification", async () => {
-  for (const path of ["README.md", "docs/new-project.md", "docs/existing-project.md", "docs/pilot-option-a.md"]) {
-    const guide = await readFile(path, "utf8")
-    const bootstrap = guide.indexOf("bootstrap:foundation")
-    const verify = guide.indexOf("verify:foundation")
+test("reseeded projects bootstrap pinned tools without rebuilding the mother manifest", async () => {
+  const packageJson = JSON.parse(await readFile("package.json", "utf8"))
 
-    assert.ok(bootstrap >= 0, `${path} must document bootstrap:foundation`)
-    assert.ok(verify > bootstrap, `${path} must run verify:foundation after bootstrap`)
+  assert.equal(
+    packageJson.scripts["bootstrap:project"],
+    "node tools/install-actionlint.mjs && node tools/install-gitleaks.mjs --install",
+  )
+  assert.doesNotMatch(packageJson.scripts["bootstrap:project"], /build-foundation-manifest/)
+
+  for (const path of ["docs/new-project.md", "docs/existing-project.md", "docs/pilot-option-a.md"]) {
+    const guide = await readFile(path, "utf8")
+    assert.match(guide, /bootstrap:project/)
+  }
+})
+
+test("installation guides place explicit bootstrap before foundation verification", async () => {
+  const guides = [
+    ["README.md", "bootstrap:foundation", "verify:foundation"],
+    ["docs/new-project.md", "bootstrap:project", "verify:synclair"],
+    ["docs/existing-project.md", "bootstrap:project", "verify:synclair"],
+    ["docs/pilot-option-a.md", "bootstrap:project", "verify:synclair"],
+  ]
+
+  for (const [path, bootstrapCommand, verifyCommand] of guides) {
+    const guide = await readFile(path, "utf8")
+    const bootstrap = guide.indexOf(bootstrapCommand)
+    const verify = guide.indexOf(verifyCommand)
+
+    assert.ok(bootstrap >= 0, `${path} must document ${bootstrapCommand}`)
+    assert.ok(verify > bootstrap, `${path} must run ${verifyCommand} after bootstrap`)
+  }
+})
+
+test("installed projects use a Synclair-only gate with explicit mother-check exclusions", async () => {
+  const packageJson = JSON.parse(await readFile("package.json", "utf8"))
+  const expanded = expandScript(packageJson.scripts, "verify:synclair")
+
+  for (const retained of [
+    "check:secrets",
+    "typecheck",
+    "lint",
+    "check:registry",
+    "check:previews",
+    "check:ux-docs",
+    "check:purity",
+    "check:pages",
+    "check:agent-bridge",
+  ]) {
+    assert.match(expanded, new RegExp(retained.replace(":", "\\:")))
+  }
+  for (const motherOnly of [
+    "check:cellfade-foundation",
+    "check:foundation-release",
+    "check:foundation-manifest",
+  ]) {
+    assert.doesNotMatch(expanded, new RegExp(motherOnly.replace(":", "\\:")))
+  }
+
+  for (const path of ["docs/new-project.md", "docs/existing-project.md", "docs/pilot-option-a.md"]) {
+    const guide = await readFile(path, "utf8")
+    assert.match(guide, /verify:synclair/)
   }
 })
 

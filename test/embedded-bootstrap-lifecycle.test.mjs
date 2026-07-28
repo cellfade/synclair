@@ -78,8 +78,16 @@ test("embedded reset preserves foundation provenance, then topology enables chec
 
   const mother = JSON.parse(await readFile(path.join(synclairRoot, "data/mother.json"), "utf8"))
   const unresolved = JSON.parse(await readFile(path.join(synclairRoot, "data/setup.json"), "utf8"))
+  const generatedFoundation = await readFile(
+    path.join(synclairRoot, "lib/system/seed/foundation.ts"),
+    "utf8",
+  )
   assert.equal(mother.commit, foundationCommit)
   assert.equal(unresolved.mode, null)
+  assert.match(generatedFoundation, /typeRoles\?: FoundationTypeRole\[\]/)
+  assert.match(generatedFoundation, /motion\?: FoundationMotion/)
+  assert.match(generatedFoundation, /icons\?: FoundationIcons/)
+  assert.match(generatedFoundation, /sample\?: FoundationSample/)
 
   run("node", ["synclair/scripts/record-setup-mode.mjs", "embedded"], hostRoot)
   await assert.rejects(readFile(path.join(hostRoot, "data/setup.json"), "utf8"))
