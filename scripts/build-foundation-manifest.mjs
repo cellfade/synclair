@@ -102,16 +102,67 @@ async function payloadBytes(root, absolutePath, stats) {
   return readFile(absolutePath)
 }
 
-function repositoryFiles(root) {
-  const result = spawnSync(
+function gitOutput(root, args, options = {}) {
+  const encoding = Object.prototype.hasOwnProperty.call(options, "encoding")
+    ? options.encoding
+    : "utf8"
+  const result = spawnSync("git", args, {
+    cwd: root,
+    encoding,
+    maxBuffer: 128 * 1024 * 1024,
+  })
+  if (result.status !== 0) {
+    throw new Error(result.error?.message || result.stderr || "foundation manifest requires a Git worktree")
+  }
+  return result.stdout
+}
+
+function repositoryTree(root) {
+  const untrackedResult = spawnSync(
     "git",
-    ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+    ["ls-files", "--others", "--exclude-standard", "-z"],
     { cwd: root, encoding: "utf8" },
   )
-  if (result.status !== 0) {
-    throw new Error(result.stderr || "foundation manifest requires a Git worktree")
+  if (untrackedResult.status !== 0) {
+    throw new Error(untrackedResult.stderr || "foundation manifest requires a Git worktree")
   }
-  return result.stdout.split("\0").filter(Boolean)
+
+  const untrackedFiles = untrackedResult.stdout.split("\0").filter(Boolean).sort(compareText)
+  if (untrackedFiles.length > 0) {
+    throw new Error(
+      `untracked files must be committed or removed before building the foundation manifest: ${untrackedFiles.map((file) => JSON.stringify(file)).join(", ")}`,
+    )
+  }
+
+  const output = gitOutput(root, ["ls-tree", "-r", "-z", "--full-tree", "HEAD"])
+  return output.split("\0").filter(Boolean).map((record) => {
+    const separator = record.indexOf("\t")
+    if (separator < 0) throw new Error(`invalid Git tree record: ${JSON.stringify(record)}`)
+
+    const [mode, type, objectId] = record.slice(0, separator).split(" ")
+    if (!mode || !type || !objectId) {
+      throw new Error(`invalid Git tree metadata: ${JSON.stringify(record)}`)
+    }
+
+    return { mode, type, objectId, path: record.slice(separator + 1) }
+  })
+}
+
+function repositoryBlob(root, objectId) {
+  return gitOutput(root, ["cat-file", "blob", objectId], { encoding: null })
+}
+
+function validateRepositorySymlink(repoPath, bytes) {
+  const target = bytes.toString("utf8")
+  const resolvedTarget = path.posix.normalize(path.posix.join(path.posix.dirname(repoPath), target))
+  if (
+    target.includes("\0") ||
+    path.posix.isAbsolute(target) ||
+    resolvedTarget === ".." ||
+    resolvedTarget.startsWith("../")
+  ) {
+    throw new Error(`payload symlink escapes the repository: ${repoPath}`)
+  }
 }
 
 async function walkPayload(root, policy, compiledPolicy, rawPaths) {
@@ -153,10 +204,60 @@ async function walkPayload(root, policy, compiledPolicy, rawPaths) {
   return entries
 }
 
+function walkRepositoryTree(root, policy, compiledPolicy, treeEntries) {
+  const entries = []
+  const normalizedPaths = new Map()
+
+  for (const treeEntry of treeEntries) {
+    const repoPath = normalizeRepoPath(treeEntry.path)
+    if (isExcluded(compiledPolicy, repoPath)) continue
+
+    const previousPath = normalizedPaths.get(repoPath)
+    if (previousPath) {
+      throw new Error(`payload paths normalize to the same value: ${previousPath}, ${treeEntry.path}`)
+    }
+    normalizedPaths.set(repoPath, treeEntry.path)
+
+    if (treeEntry.type !== "blob" || !["100644", "100755", "120000"].includes(treeEntry.mode)) {
+      throw new Error(`unsupported payload entry type: ${repoPath}`)
+    }
+
+    const bytes = repositoryBlob(root, treeEntry.objectId)
+    if (treeEntry.mode === "120000") validateRepositorySymlink(repoPath, bytes)
+    entries.push({
+      path: repoPath,
+      class: classifyPath(policy, compiledPolicy, repoPath),
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+      size: bytes.byteLength,
+      mode: treeEntry.mode,
+    })
+  }
+
+  entries.sort((left, right) => compareText(left.path, right.path))
+  return entries
+}
+
 export async function buildFoundationManifest({ root = process.cwd(), filePaths } = {}) {
-  const policy = JSON.parse(await readFile(path.join(root, POLICY_PATH), "utf8"))
+  if (filePaths) {
+    const policy = JSON.parse(await readFile(path.join(root, POLICY_PATH), "utf8"))
+    const compiledPolicy = compilePolicy(policy)
+    const files = await walkPayload(root, policy, compiledPolicy, filePaths)
+    return {
+      schemaVersion: 1,
+      algorithm: "sha256",
+      policy: POLICY_PATH,
+      files,
+    }
+  }
+
+  const treeEntries = repositoryTree(root)
+  const policyEntry = treeEntries.find((entry) => entry.path === POLICY_PATH)
+  if (!policyEntry || policyEntry.type !== "blob") {
+    throw new Error(`${POLICY_PATH} is missing from HEAD`)
+  }
+  const policy = JSON.parse(repositoryBlob(root, policyEntry.objectId).toString("utf8"))
   const compiledPolicy = compilePolicy(policy)
-  const files = await walkPayload(root, policy, compiledPolicy, filePaths ?? repositoryFiles(root))
+  const files = walkRepositoryTree(root, policy, compiledPolicy, treeEntries)
   return {
     schemaVersion: 1,
     algorithm: "sha256",
