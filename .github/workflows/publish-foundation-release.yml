@@ -1,0 +1,181 @@
+name: publish-foundation-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Immutable release tag matching foundation-v<semver>
+        required: true
+        type: string
+      source_commit:
+        description: Approved 40-character merge commit on main
+        required: true
+        type: string
+      enterprise_attestations:
+        description: Confirm private artifact attestations are enabled
+        required: true
+        type: string
+      confirmation:
+        description: Type publish-foundation-release:<tag>:<source_commit>
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  attestations: write
+  id-token: write
+
+concurrency:
+  group: foundation-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      APPROVED_SOURCE_COMMIT: ${{ inputs.source_commit }}
+      ENTERPRISE_ATTESTATIONS_CONFIRMED: ${{ inputs.enterprise_attestations }}
+      RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Require approved source and private attestation entitlement
+        run: |
+          test "$GITHUB_SHA" = "$APPROVED_SOURCE_COMMIT"
+          test "$ENTERPRISE_ATTESTATIONS_CONFIRMED" = "enterprise-private-attestations-enabled"
+          test "$RELEASE_CONFIRMATION" = "publish-foundation-release:$RELEASE_TAG:$APPROVED_SOURCE_COMMIT"
+      - name: Preflight tag and release state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          probe_status() {
+            set +e
+            response="$(gh api --method HEAD --include "$1" 2>&1)"
+            command_status=$?
+            set -e
+            http_status="$(printf '%s\n' "$response" | sed -nE 's/^HTTP[^ ]* ([0-9]{3}).*/\1/p' | tail -1)"
+            test -n "$http_status" || {
+              echo "GitHub API returned no HTTP status for $1" >&2
+              exit 1
+            }
+            if test "$command_status" -ne 0 && test "$http_status" != "404"; then
+              echo "GitHub API preflight failed closed for $1 with HTTP $http_status" >&2
+              exit 1
+            fi
+            printf '%s' "$http_status"
+          }
+
+          release_endpoint="repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG"
+          release_status="$(probe_status "$release_endpoint")"
+          case "$release_status" in
+            200)
+              release_draft="$(gh api "$release_endpoint" --jq '.draft')"
+              test "$release_draft" = "true" || {
+                echo "Published release $RELEASE_TAG already exists; refusing mutation." >&2
+                exit 1
+              }
+              release_id="$(gh api "$release_endpoint" --jq '.id')"
+              echo "RELEASE_DRAFT_EXISTS=true" >> "$GITHUB_ENV"
+              echo "RELEASE_ID=$release_id" >> "$GITHUB_ENV"
+              ;;
+            404) echo "RELEASE_DRAFT_EXISTS=false" >> "$GITHUB_ENV" ;;
+            *)
+              echo "Unexpected release preflight HTTP $release_status" >&2
+              exit 1
+              ;;
+          esac
+
+          tag_endpoint="repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG"
+          tag_status="$(probe_status "$tag_endpoint")"
+          if test "$tag_status" = "200"; then
+            existing_sha="$(gh api "$tag_endpoint" --jq '.object.sha')"
+            test "$existing_sha" = "$APPROVED_SOURCE_COMMIT"
+            echo "TAG_ALREADY_EXISTS=true" >> "$GITHUB_ENV"
+          elif test "$tag_status" = "404"; then
+            echo "TAG_ALREADY_EXISTS=false" >> "$GITHUB_ENV"
+          else
+            echo "Unexpected tag preflight HTTP $tag_status" >&2
+            exit 1
+          fi
+      - name: Package exact source commit
+        run: |
+          node scripts/package-foundation-release.mjs \
+            --tag "$RELEASE_TAG" \
+            --repository-id "$GITHUB_REPOSITORY_ID" \
+            --source-commit "$APPROVED_SOURCE_COMMIT"
+      - name: Verify release package
+        run: |
+          node scripts/verify-foundation-release.mjs \
+            --tag-file dist/release-tag.txt \
+            --repository-id "$GITHUB_REPOSITORY_ID" \
+            --source-commit "$APPROVED_SOURCE_COMMIT" \
+            --release-tag "$RELEASE_TAG"
+      - name: Attest release envelope and archive
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: |
+            dist/foundation-release.json
+            dist/synclair-foundation.tar.gz
+      - name: Create immutable source tag
+        if: env.TAG_ALREADY_EXISTS != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$RELEASE_TAG" \
+            -f "sha=$GITHUB_SHA"
+      - name: Publish private foundation release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if test "$RELEASE_DRAFT_EXISTS" != "true"; then
+            gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --draft \
+              --latest=false \
+              --title "$RELEASE_TAG" \
+              --notes "Immutable Synclair foundation package built from $GITHUB_SHA."
+            RELEASE_ID="$(gh api \
+              "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" \
+              --jq '.id')"
+          fi
+
+          for asset in \
+            dist/foundation-release.json \
+            dist/foundation-files.json \
+            dist/synclair-foundation.tar.gz \
+            dist/release-tag.txt
+          do
+            asset_name="$(basename "$asset")"
+            local_digest="sha256:$(sha256sum "$asset" | cut -d ' ' -f 1)"
+            remote_digest="$(gh api \
+              "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" \
+              --jq ".assets[] | select(.name == \"$asset_name\") | .digest")"
+            if test -n "$remote_digest"; then
+              test "$remote_digest" = "$local_digest" || {
+                echo "Existing asset $asset_name has a different digest." >&2
+                exit 1
+              }
+            else
+              gh release upload "$RELEASE_TAG" "$asset" \
+                --repo "$GITHUB_REPOSITORY"
+              remote_digest="$(gh api \
+                "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" \
+                --jq ".assets[] | select(.name == \"$asset_name\") | .digest")"
+              test "$remote_digest" = "$local_digest"
+            fi
+          done
+
+          gh api \
+            --method PATCH \
+            "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            -F draft=false >/dev/null
