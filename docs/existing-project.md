@@ -60,15 +60,30 @@ repo (a pre-Synclair prototype shape) — the source of record is
 ```bash
 scripts/synclair-reset.sh . --yes
 npm ci
-npm run bootstrap:foundation
-npm run verify:foundation
+npm run bootstrap:project
 ```
+
+The mother-only
+`verify:foundation` command additionally requires a neutral seed and an
+unchanged foundation release manifest, so it is not valid after adoption.
+The paired `bootstrap:project` command installs verification tools without
+attempting to rebuild that mother-only manifest from a host repository.
 
 Then reseed per [`new-project.md`](new-project.md) §4, with the host project as
 the subject: set `lib/system/seed/project.ts` `name`/`tagline` to the host
 product's, and point `lib/system/knowledge/sources.ts` at the host project's
 PRDs/specs/Figma. Theme is optional — pull the host's brand ramps in if you
 want token parity, or leave the neutral theme for a pure hub.
+
+Record the sibling topology and verify the customized hub only after reseeding:
+
+```bash
+node scripts/record-setup-mode.mjs watcher
+npm run verify:synclair
+```
+
+Run the host product's own gates in its repository; `verify:synclair` does not
+claim to lint, test, or build the separate product.
 
 ## 3. Run
 

@@ -35,6 +35,7 @@
     "package:foundation-release": "node scripts/package-foundation-release.mjs",
     "verify:foundation-release": "node scripts/verify-foundation-release.mjs",
     "verify:foundation-attestation": "node scripts/verify-foundation-attestation.mjs",
+    "bootstrap:project": "node tools/install-actionlint.mjs && node tools/install-gitleaks.mjs --install",
     "bootstrap:foundation": "node tools/install-actionlint.mjs && node tools/install-gitleaks.mjs --install && node scripts/build-foundation-manifest.mjs",
     "build:foundation-manifest": "node scripts/build-foundation-manifest.mjs",
     "check:foundation-manifest": "node scripts/build-foundation-manifest.mjs --check",
@@ -47,6 +48,8 @@
     "test:foundation-security": "node --test test/foundation-manifest-security.test.mjs",
     "test:cli-deprecation": "node scripts/test-cli-deprecation.mjs",
     "verify-ui": "npm run check:cellfade-foundation && npm run check:secrets && npm run typecheck && npm run lint && npm run check:registry && npm run check:previews && npm run check:ux-docs && npm run check:purity && npm run check:pages && npm run check:agent-bridge",
+    "verify:synclair-ui": "npm run check:secrets && npm run typecheck && npm run lint && npm run check:registry && npm run check:previews && npm run check:ux-docs && npm run check:purity && npm run check:pages && npm run check:agent-bridge",
+    "verify:synclair": "npm run test:phase0 && npm run test:pilot-readiness && npm run test:project-manifest && npm run test:embedded-lifecycle && npm run test:governance-scaffold && npm run test:foundation-security && npm run check:control-plane-docs && npm run check:vercel-capabilities && npm run test:cli-deprecation && npm run check:workflows && npm run verify:synclair-ui",
     "verify:foundation": "npm run test:phase0 && npm run test:pilot-readiness && npm run test:project-manifest && npm run test:embedded-lifecycle && npm run test:governance-scaffold && npm run test:foundation-security && npm run check:control-plane-docs && npm run check:vercel-capabilities && npm run check:foundation-release && npm run check:foundation-manifest && npm run test:cli-deprecation && npm run check:workflows && npm run verify-ui",
     "postinstall": "patch-package"
   },
